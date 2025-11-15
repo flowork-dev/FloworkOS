@@ -1,0 +1,28 @@
+{
+  "capsule_id": "code-review-guardian-v1",
+  "fac_template": {
+    "role": "CodeReviewGuardian",
+    "budget_gas": 512,
+    "capabilities": [
+      {
+        "name": "fs.read",
+        "scope": {
+          "path_prefix": "/repo"
+        },
+        "description": "Read repository files"
+      }
+    ]
+  },
+  "example_episode": "example-episode.json",
+  "timeline_sample": [
+    {
+      "type": "analysis",
+      "msg": "Scanned repository..."
+    },
+    {
+      "type": "suggestion",
+      "msg": "Refactor agent context module."
+    }
+  ],
+  "docs": "Import this capsule, map /repo to CAPSULE_REPO_DIR, then start a session with this capsule to review code."
+}
