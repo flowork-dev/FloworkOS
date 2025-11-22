@@ -1,0 +1,29 @@
+{
+    "version": 1,
+    "author_id": "0xEaEAF25eEe338913353Be722E2b7E6C57fdb46fe",
+    "timestamp": "2025-11-21T09:40:27.464022Z",
+    "previous_hash": null,
+    "workflow_data": {
+        "nodes": [
+            {
+                "id": "0f1d3a01-f98d-4d65-b476-53c195cecab6",
+                "name": "POPUP DEBUGING",
+                "x": 810,
+                "y": 144,
+                "module_id": "debug_popup_module",
+                "config_values": {}
+            }
+        ],
+        "connections": [],
+        "global_loop_config": {
+            "isEnabled": false,
+            "iterations": 1,
+            "isDelayEnabled": false,
+            "delayType": "static",
+            "delayStatic": 1,
+            "delayRandomMin": 1,
+            "delayRandomMax": 5
+        }
+    },
+    "signature": "0xd81cac29ae8097bf6f868a20eb8ced142d0382c9600a79e8e4bbfa6eb30c7aff50d3370ff8c96d563207b729ca7f7b1fdb63e9fe54288608cb0adac2532368e71b"
+}
