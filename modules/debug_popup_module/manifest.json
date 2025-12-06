@@ -1,0 +1,68 @@
+{
+    "id": "debug_popup_module",
+    "name": "POPUP DEBUGING",
+    "description": "Simple popup for debugging flow data",
+    "version": "1.2",
+    "icon_file": "icon.png",
+    "author": "AWENK AUDICO",
+    "email": "Contributor@teetah.art",
+    "website": "www.teetah.art",
+    "type": "LOGIC",
+    "entry_point": "processor.DebugPopupModule",
+    "tier": "free",
+    "properties": [],
+    "ui_schema": [
+        {
+            "id": "popup_title",
+            "type": "text",
+            "label": "Popup Title",
+            "default": "Debug Inspector",
+            "placeholder": "Enter custom title...",
+            "icon": "mdi-window-maximize",
+            "description": "Header title for the debug window"
+        },
+        {
+            "id": "theme_mode",
+            "type": "select",
+            "label": "Visual Theme",
+            "default": "Default",
+            "options": [
+                "Default",
+                "Matrix Green",
+                "Cyberpunk Neon",
+                "Minimalist Light"
+            ],
+            "icon": "mdi-palette-swatch",
+            "description": "Select the visual style of the popup"
+        },
+        {
+            "id": "auto_close_seconds",
+            "type": "number",
+            "label": "Auto Close (Seconds)",
+            "default": 0,
+            "icon": "mdi-timer-outline",
+            "description": "0 to keep open until clicked"
+        },
+        {
+            "id": "show_metadata",
+            "type": "toggle",
+            "label": "Show Metadata",
+            "default": false,
+            "description": "Include technical metadata in view"
+        }
+    ],
+    "permissions": [
+        "ui_interaction"
+    ],
+    "requires_services": [
+        "logger",
+        "event_bus",
+        "workflow_executor_service"
+    ],
+    "output_ports": [
+        {
+            "name": "output",
+            "display_name": "Output"
+        }
+    ]
+}

@@ -1,0 +1,93 @@
+{
+    "id": "youtube_keyword_researcher_v1",
+    "name": "YouTube Keyword Researcher",
+    "version": "1.1.0",
+    "icon_file": "icon.png",
+    "author": "Flowork Specialist",
+    "description": "Riset kata kunci video YouTube (Metadata & AI Transcript) -> Export ke CSV.",
+    "category": "SEO & Research",
+    "type": "ACTION",
+    "entry_point": "processor.YouTubeKeywordResearcher",
+    "tier": "architect",
+    "behaviors": ["retry"],
+    "requires_services": ["logger"],
+    "properties": [],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "1. Target Video"
+        },
+        {
+            "id": "video_url",
+            "type": "string",
+            "label": "YouTube URL",
+            "description": "Link video yang ingin dianalisa.",
+            "icon": "mdi-youtube",
+            "placeholder": "https://www.youtube.com/watch?v=...",
+            "required": true
+        },
+        {
+            "component": "header",
+            "label": "2. Research Mode"
+        },
+        {
+            "id": "research_depth",
+            "type": "select",
+            "label": "Analysis Depth",
+            "description": "Flash = Cepat (Metadata). Deep = Detail (Audio Transcript).",
+            "icon": "mdi-magnify-scan",
+            "default": "Flash (Metadata Only)",
+            "options": [
+                "Flash (Metadata Only)",
+                "Deep (Whisper AI Analysis)"
+            ]
+        },
+        {
+            "component": "header",
+            "label": "3. AI Settings (Deep Mode)"
+        },
+        {
+            "id": "whisper_model",
+            "type": "select",
+            "label": "AI Model Size",
+            "description": "Ukuran model AI transkrip (Base rekomendasi gw).",
+            "icon": "mdi-robot",
+            "default": "base",
+            "options": [
+                "tiny",
+                "base",
+                "small"
+            ]
+        },
+        {
+            "id": "language_hint",
+            "type": "string",
+            "label": "Language Hint",
+            "description": "Kode bahasa (id, en) jika video bukan Inggris.",
+            "icon": "mdi-translate",
+            "default": "en"
+        },
+        {
+            "component": "header",
+            "label": "4. Output Storage"
+        },
+        {
+            "id": "output_folder",
+            "type": "string",
+            "label": "Save CSV To",
+            "component": "folder_picker",
+            "description": "Folder untuk menyimpan hasil analisa (CSV).",
+            "icon": "mdi-folder-table",
+            "required": true
+        }
+    ],
+    "output_ports": [
+        {"name": "success", "display_name": "Success"},
+        {"name": "error", "display_name": "Error"}
+    ],
+    "output_schema": {
+        "result_json": "object",
+        "top_keywords": "string",
+        "csv_file_path": "string"
+    }
+}

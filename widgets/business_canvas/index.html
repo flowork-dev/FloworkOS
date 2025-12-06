@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Model Canvas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #1e1e2e;
+            --card-bg: #2a2a3c;
+            --text-color: #e0e0e0;
+            --accent-color: #00f5ff;
+            --border-color: #444;
+            --note-bg: #fff9c4;
+            --note-text: #333;
+            --danger: #ff4d4d;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Mencegah scroll body, fokus ke grid */
+        }
+
+        .title-bar {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            flex-shrink: 0; /* Judul gak boleh kepenet */
+        }
+
+        /* [GRID MAGIC] */
+        .canvas-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: 2fr 2fr 1.5fr; /* Proporsi baris lebih rapi */
+            gap: 10px;
+            flex: 1;
+            min-height: 0; /* PENTING: Biar grid gak jebol container */
+            width: 100%;
+        }
+
+        .block {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+
+            /* [SCROLL MAGIC] */
+            min-width: 0;
+            min-height: 0; /* PENTING: Biar anak elemen bisa scroll */
+            overflow: hidden; /* Konten tumpah disembunyikan */
+        }
+
+        /* Posisi Grid Sesuai BMC Standard */
+        #kp { grid-column: 1; grid-row: 1 / span 2; }
+        #ka { grid-column: 2; grid-row: 1; }
+        #kr { grid-column: 2; grid-row: 2; }
+        #vp { grid-column: 3; grid-row: 1 / span 2; }
+        #cr { grid-column: 4; grid-row: 1; }
+        #ch { grid-column: 4; grid-row: 2; }
+        #cs { grid-column: 5; grid-row: 1 / span 2; }
+        #cs-cost { grid-column: 1 / span 2; grid-row: 3; }
+        #rs-rev { grid-column: 3 / span 3; grid-row: 3; }
+
+        .block-header {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0; /* Header tetep diem */
+        }
+
+        .add-btn {
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: var(--accent-color);
+            font-weight: bold;
+            user-select: none;
+        }
+        .add-btn:hover { transform: scale(1.1); }
+
+        .block-content {
+            flex: 1;
+            overflow-y: auto; /* SCROLLBAR MUNCUL DISINI */
+            overflow-x: hidden;
+            padding-right: 5px; /* Space buat scrollbar */
+        }
+
+        /* Custom Scrollbar biar kece */
+        .block-content::-webkit-scrollbar { width: 6px; }
+        .block-content::-webkit-scrollbar-track { background: transparent; }
+        .block-content::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+        .block-content::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        .note {
+            background-color: var(--note-bg);
+            color: var(--note-text);
+            padding: 8px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            position: relative;
+            animation: popIn 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .note textarea {
+            width: 100%;
+            border: none;
+            background: transparent;
+            resize: none;
+            font-family: inherit;
+            font-size: inherit;
+            color: inherit;
+            outline: none;
+            overflow: hidden;
+            min-height: 1.2em;
+            display: block;
+        }
+
+        .delete-note {
+            position: absolute;
+            top: 2px;
+            right: 5px;
+            color: #555;
+            cursor: pointer;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .note:hover .delete-note { opacity: 1; }
+
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--accent-color);
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <div class="title-bar">Business Model Canvas Widget</div>
+
+    <div class="canvas-grid">
+        <div class="block" id="kp"><div class="block-header">Key Partners <span class="add-btn" onclick="addNote('kp')">+</span></div><div class="block-content"></div></div>
+        <div class="block" id="ka"><div class="block-header">Key Activities <span class="add-btn" onclick="addNote('ka')">+</span></div><div class="block-content"></div></div>
+        <div class="block" id="kr"><div class="block-header">Key Resources <span class="add-btn" onclick="addNote('kr')">+</span></div><div class="block-content"></div></div>
+        <div class="block" id="vp"><div class="block-header">Value Propositions <span class="add-btn" onclick="addNote('vp')">+</span></div><div class="block-content"></div></div>
+        <div class="block" id="cr"><div class="block-header">Cust. Relationships <span class="add-btn" onclick="addNote('cr')">+</span></div><div class="block-content"></div></div>
+        <div class="block" id="ch"><div class="block-header">Channels <span class="add-btn" onclick="addNote('ch')">+</span></div><div class="block-content"></div></div>
+        <div class="block" id="cs"><div class="block-header">Cust. Segments <span class="add-btn" onclick="addNote('cs')">+</span></div><div class="block-content"></div></div>
+        <div class="block" id="cs-cost"><div class="block-header">Cost Structure <span class="add-btn" onclick="addNote('cs-cost')">+</span></div><div class="block-content"></div></div>
+        <div class="block" id="rs-rev"><div class="block-header">Revenue Streams <span class="add-btn" onclick="addNote('rs-rev')">+</span></div><div class="block-content"></div></div>
+    </div>
+
+    <div id="toast" class="toast">Saved!</div>
+
+    <script>
+        const blocks = ['kp', 'ka', 'kr', 'vp', 'cr', 'ch', 'cs', 'cs-cost', 'rs-rev'];
+        const DATA_KEY = 'widget_business_canvas_data'; // Kunci Unik
+
+        function addNote(blockId, text = '') {
+            const container = document.querySelector(`#${blockId} .block-content`);
+            const note = document.createElement('div');
+            note.className = 'note';
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.placeholder = "Type here...";
+            textarea.rows = 1;
+            // Auto-resize textarea logic
+            textarea.oninput = function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            };
+
+            const delBtn = document.createElement('span');
+            delBtn.className = 'delete-note';
+            delBtn.innerHTML = '✖';
+            delBtn.onclick = function() { note.remove(); };
+
+            note.appendChild(textarea);
+            note.appendChild(delBtn);
+            container.appendChild(note);
+
+            // Set initial height
+            setTimeout(() => textarea.oninput(), 0);
+
+            if(!text) textarea.focus();
+        }
+
+        function getCanvasData() {
+            const data = {};
+            blocks.forEach(id => {
+                const notes = [];
+                document.querySelectorAll(`#${id} .note textarea`).forEach(txt => {
+                    if(txt.value.trim()) notes.push(txt.value);
+                });
+                data[id] = notes;
+            });
+            return data;
+        }
+
+        function renderCanvas(data) {
+            blocks.forEach(id => { document.querySelector(`#${id} .block-content`).innerHTML = ''; });
+            if (!data) return;
+            for (const [id, notes] of Object.entries(data)) {
+                if (blocks.includes(id) && Array.isArray(notes)) {
+                    notes.forEach(text => addNote(id, text));
+                }
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // --- [BRIDGE PROTOCOL] ---
+        window.addEventListener('message', (event) => {
+            const { type, payload } = event.data;
+
+            // 1. Parent Minta Data (CMD_SAVE)
+            if (type === 'CMD_SAVE') {
+                const data = getCanvasData();
+                // Kirim balik ke Parent
+                window.parent.postMessage({
+                    type: 'WIDGET_SAVE_REQUEST',
+                    payload: {
+                        key: DATA_KEY,
+                        data: data
+                    }
+                }, '*');
+            }
+
+            // 2. Parent Ngasih Data (CMD_LOAD)
+            if (type === 'CMD_LOAD') {
+                renderCanvas(payload);
+            }
+
+            // 3. Feedback Sukses
+            if (type === 'WIDGET_SAVE_SUCCESS') {
+                showToast("Saved to Cloud!");
+            }
+        });
+
+    </script>
+</body>
+</html>

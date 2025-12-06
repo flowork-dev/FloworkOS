@@ -1,0 +1,13 @@
+{
+    "id": "flux_video_deck",
+    "name": "Flux Video Deck",
+    "version": "2.0.0",
+    "description": "Tactical video operations terminal with neural playback control.",
+    "author": "Flowork Cyber Division",
+    "tier": "free",
+    "type": "widget",
+    "entry_point": "index.html",
+    "icon_file": "icon.png",
+    "default_width": 12,
+    "default_height": 9
+}

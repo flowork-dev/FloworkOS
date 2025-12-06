@@ -1,0 +1,87 @@
+{
+    "id": "video_storyboard_stitcher_d5e6",
+    "name": "Video Storyboard Stitcher",
+    "version": "4.1",
+    "icon_file": "icon.png",
+    "author": "AWENK AUDICO & Gemini",
+    "email": "contributor@teetah.art",
+    "website": "www.teetah.art",
+    "description": "Pure video stitcher. Combines random clips from sequential folders (A->B->C) based on the smallest folder count.",
+    "type": "ACTION",
+    "entry_point": "processor.VideoStoryboardStitcherModule",
+    "tier": "architect",
+    "behaviors": [
+        "retry"
+    ],
+    "requires_services": [
+        "logger",
+        "loc",
+        "kernel"
+    ],
+    "ui_schema": [
+        {
+            "id": "video_sections",
+            "type": "list",
+            "label": "Storyboard Sequence (Folders A -> B -> C ...)",
+            "description": "Add folders in the order you want them connected.",
+            "component": "FolderPairList",
+            "schema": [
+                {
+                    "id": "folder_path",
+                    "type": "string",
+                    "label": "Source Folder",
+                    "component": "folder_picker"
+                }
+            ]
+        },
+        {
+            "id": "settings_header",
+            "type": "string",
+            "component": "header",
+            "label": "Output Configuration"
+        },
+        {
+            "id": "output_folder",
+            "type": "string",
+            "label": "Output Destination Folder",
+            "component": "folder_picker",
+            "default": ""
+        },
+        {
+            "id": "output_filename_prefix",
+            "type": "string",
+            "label": "Output Filename Prefix",
+            "default": "storyboard_stitch"
+        },
+        {
+            "id": "delete_after_use",
+            "type": "boolean",
+            "label": "Delete source clips after processing?",
+            "description": "WARNING: This will permanently delete the used video files from your disk to prevent duplicates.",
+            "component": "toggle",
+            "default": false
+        }
+    ],
+    "output_ports": [
+        {
+            "name": "success",
+            "display_name": "Success"
+        },
+        {
+            "name": "error",
+            "display_name": "Error"
+        }
+    ],
+    "output_schema": [
+        {
+            "name": "data.stitched_video_paths",
+            "type": "list",
+            "description": "List of all created video paths."
+        },
+        {
+            "name": "data.total_created",
+            "type": "integer",
+            "description": "Total count of processed videos."
+        }
+    ]
+}

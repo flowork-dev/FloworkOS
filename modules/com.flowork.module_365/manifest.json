@@ -1,0 +1,20 @@
+{
+    "id": "com.flowork.module_365",
+    "name": "New Logic Module",
+    "author": "Unknown",
+    "description": "Process data and return results.",
+    "type": "module",
+    "entry_point": "processor.py",
+    "version": "1.0",
+    "requires_input": true,
+    "properties": [],
+    "output_ports": [],
+    "output_schema": [],
+    "display_properties": {
+        "color": "#FFCA28",
+        "text_color": ""
+    },
+    "supported_languages": [
+        "python"
+    ]
+}

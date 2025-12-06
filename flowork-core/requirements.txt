@@ -1,0 +1,95 @@
+# ===================================================================
+# FLOWORK CORE - REQUIREMENTS (VERSI 1.5 - DOCKER SAFE & COMPLETE)
+# ===================================================================
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+# --- BUILD TOOLS (PRIORITY 1: Install Before Anything Else) ---
+cmake
+ninja
+packaging
+wheel
+setuptools
+
+# --- CORE AI ENGINE (LOCKED FOR STABILITY) ---
+# Mengunci versi torch agar kompatibel dengan Unsloth & CUDA 12.1+
+torch>=2.4.0
+torchvision
+torchaudio
+
+# --- LLM & TRANSFORMERS ---
+# Unsloth butuh transformers versi spesifik, kita kunci di 4.40+
+# tapi dibawah 4.42 sementara jika ada isu, namun 4.40.0 paling aman.
+transformers>=4.40.0
+llama-cpp-python>=0.3.14,<0.4.0
+sentence-transformers>=3.0.0
+diffusers
+accelerate>=0.28.0
+safetensors
+hf-xet
+google-generativeai
+faster-whisper
+openai
+
+# --- MEDIA & UTILS (ALL ORIGINAL LIBS RESTORED) ---
+pyaudio
+mss
+moviepy
+pystray
+Pillow>=10.0.0
+pandas
+scipy
+beautifulsoup4
+selenium
+webdriver-manager
+fake-useragent
+duckduckgo-search
+
+# --- SYSTEM & SERVER ---
+eventlet
+python-socketio
+psutil
+GPUtil
+requests
+pydantic
+apscheduler
+python-dotenv
+flask
+flask-cors
+watchdog
+pycryptodome
+cryptography
+python-dateutil
+cython
+toml
+msgpack
+prometheus-client
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp-proto-http
+aiohttp
+aiofiles
+websockets
+web3
+eth-account
+prometheus-flask-exporter
+werkzeug
+SQLAlchemy
+flask-migrate
+
+# --- AI TRAINING & OPTIMIZATION (WAJIB ADA) ---
+peft>=0.10.0
+bitsandbytes>=0.41.1
+sentencepiece
+protobuf
+
+# --- FLOWORK AI POWERPACK ---
+
+# 1. OMNIVORE (Baca File & Web)
+PyPDF2>=3.0.0
+python-docx>=0.8.11
+langchain-text-splitters>=0.0.1
+
+# 2. SPEED & OPTIMIZATION (Unsloth & QLoRA)
+trl>=0.8.1
+# Menggunakan instalasi standar unsloth yang kompatibel dengan torch 2.4+
+unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git

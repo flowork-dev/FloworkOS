@@ -1,0 +1,68 @@
+{
+    "id": "static_data_provider_module",
+    "name": "Static Data Provider",
+    "version": "1.1",
+    "icon_file": "icon.png",
+    "author": "AWENK AUDICO",
+    "email": "sahidinaola@gmail.com",
+    "website": "www.teetah.art",
+    "description": "Injects custom static data (text, JSON, config) into the workflow payload. Useful for testing or initialization.",
+    "category": "Logic",
+    "type": "LOGIC",
+    "entry_point": "processor.StaticDataProviderModule",
+    "tier": "free",
+    "behaviors": [
+        "retry"
+    ],
+    "requires_services": [
+        "logger",
+        "loc",
+        "kernel"
+    ],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "Data Injection Configuration"
+        },
+        {
+            "id": "variables_to_set",
+            "type": "list",
+            "label": "Static Variables",
+            "icon": "mdi-database-plus",
+            "description": "Add key-value pairs to inject into the payload.",
+            "schema": [
+                {
+                    "id": "name",
+                    "type": "string",
+                    "label": "Variable Name (Key)",
+                    "placeholder": "e.g. client_id, status, mock_response",
+                    "required": true
+                },
+                {
+                    "id": "value",
+                    "type": "textarea",
+                    "label": "Value",
+                    "placeholder": "Enter value here...",
+                    "rows": 2
+                }
+            ]
+        }
+    ],
+    "output_ports": [
+        {
+            "name": "success",
+            "display_name": "Success"
+        },
+        {
+            "name": "error",
+            "display_name": "Error"
+        }
+    ],
+    "output_schema": [
+        {
+            "name": "[dynamic]",
+            "type": "any",
+            "description": "Output variables are generated dynamically based on configuration."
+        }
+    ]
+}

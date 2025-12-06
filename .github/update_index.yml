@@ -1,0 +1,71 @@
+########################################################################
+# WEBSITE https://flowork.cloud
+# File NAME : C:\FLOWORK\.github\update_index.yml total lines 72 
+########################################################################
+
+name: Update Marketplace Index
+
+on:
+  push:
+    paths:
+      - 'presets/**.json' # Robot bangun kalau ada file JSON baru di presets
+  workflow_dispatch: # Biar bisa dijalanin manual juga
+
+permissions:
+  contents: write
+
+jobs:
+  build-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Generate Marketplace Index
+        run: |
+          python3 -c "
+          import os, json
+
+          index_list = []
+          repo_full_name = '${{ github.repository }}'
+          branch = 'main'
+
+          presets_dir = 'presets'
+          output_file = 'marketplace.json'
+
+          if os.path.exists(presets_dir):
+              print(f'Scanning directory: {presets_dir}...')
+              for f in os.listdir(presets_dir):
+                  if f.endswith('.json'):
+                      try:
+                          with open(os.path.join(presets_dir, f), 'r') as file:
+                              data = json.load(file)
+                              meta = data.get('meta', {})
+                              if not meta.get('name'): continue
+
+                              meta['id'] = data.get('id', f.replace('.json', ''))
+                              meta['filename'] = f
+                              meta['download_url'] = f'https://raw.githubusercontent.com/{repo_full_name}/{branch}/{presets_dir}/{f}'
+
+                              index_list.append(meta)
+                              print(f'Indexed: {meta.get('name')}')
+                      except Exception as e:
+                          print(f'Error reading {f}: {e}')
+
+          index_list.sort(key=lambda x: x.get('created_at', 0), reverse=True)
+
+          with open(output_file, 'w') as f:
+              json.dump(index_list, f, indent=2)
+          "
+
+      - name: Commit and Push Index
+        run: |
+          git config --global user.name 'Flowork Bot'
+          git config --global user.email 'bot@flowork.cloud'
+          git add marketplace.json
+          if git diff --staged --quiet; then
+            echo "No changes to marketplace.json"
+          else
+            git commit -m "Auto-update marketplace index [skip ci]"
+            git push
+          fi

@@ -1,0 +1,57 @@
+{
+    "id": "file_system_trigger",
+    "name": "File System Watcher",
+    "version": "2.0",
+    "icon_file": "icon.png",
+    "author": "Flowork System",
+    "description": "Triggers the workflow when files are created, modified, or deleted in a specific directory.",
+    "type": "TRIGGER",
+    "entry_point": "processor.FileSystemTriggerModule",
+    "listener_entry_point": "listener.FileSystemListener",
+    "tier": "free",
+    "requires_input": false,
+    "requires_services": [
+        "logger",
+        "loc"
+    ],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "Watch Configuration"
+        },
+        {
+            "id": "path_to_watch",
+            "type": "string",
+            "component": "folder_picker",
+            "label": "Target Folder",
+            "default": "",
+            "placeholder": "/path/to/monitor",
+            "icon": "mdi-folder-eye-outline",
+            "description": "The local directory to monitor for changes.",
+            "required": true
+        },
+        {
+            "id": "events_to_watch",
+            "type": "select",
+            "label": "Trigger Events",
+            "default": ["created"],
+            "options": ["created", "modified", "deleted", "moved"],
+            "multiple": true,
+            "icon": "mdi-file-clock-outline",
+            "description": "Select one or more events to listen for."
+        },
+        {
+            "id": "recursive",
+            "type": "boolean",
+            "label": "Watch Subdirectories",
+            "default": false,
+            "description": "If checked, monitors all nested folders inside the target."
+        }
+    ],
+    "output_ports": [
+        {
+            "name": "output",
+            "display_name": "File Event"
+        }
+    ]
+}

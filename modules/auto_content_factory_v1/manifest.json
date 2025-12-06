@@ -1,0 +1,82 @@
+{
+    "name": "Auto Content Factory",
+    "description": "Content Factory Machine. Splits Source Videos -> Stitches per Layer -> Combines into Storyboard.",
+    "version": "4.2.0",
+    "author": "Flowork Dev",
+    "category": "Automation",
+    "module_id": "auto_content_factory_v1",
+    "icon": "icon.png",
+    "type": "ACTION",
+    "entry_point": "processor.AutoContentFactoryModule",
+    "tier": "architect",
+    "requires_services": [
+        "logger",
+        "loc",
+        "kernel"
+    ],
+    "inputs": { "input": { "type": "main", "label": "Trigger" } },
+    "outputs": { "success": { "type": "main", "label": "Success" }, "error": { "type": "main", "label": "Error" } },
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "1. Source Layers (Video & Audio)"
+        },
+        {
+            "id": "layer_pairs",
+            "type": "list",
+            "component": "FolderPairList",
+            "label": "Storyboard Layers",
+            "left_label": "Video Source Folder",
+            "right_label": "Audio Source Folder",
+            "description": "Define sequence: Hook, Body, Outro. Left=Video, Right=Audio.",
+            "required": true
+        },
+        {
+            "component": "header",
+            "label": "2. Processing Settings"
+        },
+        {
+            "id": "clip_duration",
+            "type": "integer",
+            "label": "✂️ Clip Duration (sec)",
+            "default": 2
+        },
+        {
+            "id": "add_subtitles",
+            "type": "boolean",
+            "label": "📝 AI Subtitles (Karaoke)",
+            "default": true
+        },
+        {
+            "id": "subtitle_color",
+            "type": "text",
+            "component": "color_picker",
+            "label": "🎨 Subtitle Color",
+            "default": "#FFFF00"
+        },
+        {
+            "id": "global_audio_folder",
+            "type": "string",
+            "component": "folder_picker",
+            "label": "🎵 Fallback Audio",
+            "description": "Optional backup audio source."
+        },
+        {
+            "component": "header",
+            "label": "3. Output"
+        },
+        {
+            "id": "output_folder",
+            "type": "string",
+            "component": "folder_picker",
+            "label": "💾 Destination Folder",
+            "required": true
+        },
+        {
+            "id": "clear_temp_cache",
+            "type": "boolean",
+            "label": "🧹 Clear Cache",
+            "default": true
+        }
+    ]
+}

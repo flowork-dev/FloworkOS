@@ -1,0 +1,42 @@
+{
+    "id": "system_diagnostics_plugin",
+    "name": "System Diagnostics UI Provider",
+    "version": "1.1",
+    "icon_file": "icon.png",
+    "author": "Flowork System",
+    "email": "Contributor@teetah.art",
+    "website": "www.teetah.art",
+    "description": "Provides diagnostic data bridge between the UI and the internal DiagnosticsService.",
+    "category": "System",
+    "type": "PLUGIN",
+    "entry_point": "processor.SystemDiagnosticsPlugin",
+    "tier": "architect",
+    "requires_services": [
+        "logger",
+        "loc",
+        "kernel",
+        "diagnostics_service"
+    ],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "Diagnostics Configuration"
+        },
+        {
+            "id": "report_detail",
+            "type": "select",
+            "label": "Report Detail Level",
+            "options": ["Basic", "Standard", "Verbose"],
+            "default": "Standard",
+            "icon": "mdi-file-document-multiple-outline",
+            "description": "How much information to include in the report."
+        },
+        {
+            "id": "include_hardware_info",
+            "type": "boolean",
+            "label": "Include Hardware Info",
+            "default": true,
+            "description": "Add CPU/RAM usage stats to the report."
+        }
+    ]
+}

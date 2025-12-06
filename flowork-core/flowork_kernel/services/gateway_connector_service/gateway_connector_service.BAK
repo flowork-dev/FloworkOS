@@ -1,0 +1,1802 @@
+########################################################################
+# WEBSITE https://flowork.cloud
+# File NAME : C:\FLOWORK\flowork-core\flowork_kernel\services\gateway_connector_service\gateway_connector_service.py
+########################################################################
+
+"""
+document : https://flowork.cloud/p-analisis-mendalam-gatewayconnectorservice-jantung-komunikasi-kernel-fl-id.html
+"""
+
+import socketio
+import os
+import asyncio
+import logging
+import uuid
+import json
+import multiprocessing
+import requests
+import time
+import sqlite3
+from dotenv import load_dotenv
+from typing import Dict, Any
+from flowork_kernel.services.base_service import BaseService
+from flowork_kernel.singleton import Singleton
+from flowork_kernel.services.database_service.database_service import DatabaseService
+from flowork_kernel.services.variable_manager_service.variable_manager_service import VariableManagerService
+from flowork_kernel.router import StrategyRouter
+from flowork_kernel.fac_enforcer import FacRuntime
+from flowork_kernel.exceptions import PermissionDeniedError
+
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
+
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '..', '..', '.env'))
+CURRENT_PAYLOAD_VERSION = 2
+
+class GatewayConnectorService(BaseService):
+    def __init__(self, kernel, service_id):
+        super().__init__(kernel, service_id)
+        self.sio = socketio.AsyncClient(
+            logger=False,
+            engineio_logger=False,
+            reconnection=True,
+            reconnection_delay=5,
+            reconnection_attempts=0
+        )
+        self.gateway_url = os.getenv("GATEWAY_API_URL", "http://gateway:8000")
+        self.engine_token = os.getenv("FLOWORK_ENGINE_TOKEN")
+        self.engine_id = os.getenv("FLOWORK_ENGINE_ID")
+        self.kernel_services = {}
+        self.user_id = None
+        self.internal_api_url = None
+        self._hb_task = None
+
+        # (English Hardcode) Watchdog task reference for Active Connection Stabilizer
+        self._watchdog_task = None
+
+        self.router = StrategyRouter(["default","fast","thorough"])
+
+        self._pending_swarm_tasks: Dict[str, asyncio.Future] = {}
+        self._pending_swarm_tasks_lock = asyncio.Lock()
+
+        self.g_active_sessions: Dict[str, FacRuntime] = {}
+
+        self.logger.info(f"GatewayConnectorService (Socket.IO Client Mode) initialized. URL: {self.gateway_url}")
+        self.register_event_handlers()
+
+    async def _run_watchdog(self):
+        """
+        (English Hardcode) Active Connection Stabilizer (Watchdog).
+        Strategies:
+        1. Micro-Ping every 3 seconds to keep Cloudflare tunnel alive.
+        2. Force keep-alive on the socket engine.
+        """
+        self.logger.info("[Watchdog] Active Connection Stabilizer STARTED (Interval: 3s).")
+        try:
+            while True:
+                if self.sio.connected:
+                    try:
+                        # (English Hardcode) Send micro-ping to keep connection active
+                        # This prevents 'idle timeout' from Cloudflare/Nginx layers
+                        await self.sio.emit('core:ping', {'ts': int(time.time())}, namespace='/engine-socket')
+                    except Exception as e:
+                         # (English Hardcode) Log but don't crash the watchdog
+                        self.logger.warning(f"[Watchdog] Ping failed (Connection unstable?): {e}")
+                else:
+                    self.logger.debug("[Watchdog] Socket disconnected. Waiting for auto-reconnect...")
+
+                # (English Hardcode) Wait 3 seconds before next ping
+                await asyncio.sleep(3)
+
+        except asyncio.CancelledError:
+            self.logger.info("[Watchdog] Task Cancelled (Service Stopping or Disconnected).")
+        except Exception as e:
+            self.logger.error(f"[Watchdog] CRITICAL FAILURE: {e}", exc_info=True)
+
+    async def send_gateway_swarm_task(self, target_engine_id: str, task_payload: Dict[str, Any]) -> Dict[str, Any]:
+        task_id = task_payload.get("task_id")
+        if not task_id:
+            return {"error": "send_gateway_swarm_task: task_payload must have a 'task_id'."}
+
+        if not self.sio.connected:
+            self.logger.error(f"[Gateway R6] Cannot send task {task_id}: Socket not connected.")
+            return {"error": "GatewayError: Core is not connected to Gateway."}
+
+        loop = asyncio.get_running_loop()
+        task_future = loop.create_future()
+
+        async with self._pending_swarm_tasks_lock:
+            self._pending_swarm_tasks[task_id] = task_future
+
+        self.logger.info(f"[Gateway R6] Sending swarm task {task_id} to Gateway (Target: {target_engine_id})...")
+
+        try:
+            await self.emit_to_gateway('core:request_swarm_task', {
+                "target_engine_id": target_engine_id,
+                "task_payload": task_payload
+            })
+
+            timeout_s = task_payload.get("swarm_timeout_s", 30.0)
+
+            result = await asyncio.wait_for(task_future, timeout=timeout_s)
+            self.logger.info(f"[Gateway R6] Received result for task {task_id}.")
+            return result
+
+        except asyncio.TimeoutError:
+            self.logger.error(f"[Gateway R6] Task {task_id} timed out waiting for Gateway result.")
+            return {"error": f"GatewayTimeout: Task {task_id} timed out after {timeout_s}s."}
+        except Exception as e:
+            self.logger.error(f"[Gateway R6] Failed to send/wait for task {task_id}: {e}", exc_info=True)
+            return {"error": f"GatewayError: Failed to send task: {e}"}
+        finally:
+            async with self._pending_swarm_tasks_lock:
+                self._pending_swarm_tasks.pop(task_id, None)
+
+    def _resolve_home_gateway(self) -> str:
+        try:
+            resolver_url = f"{self.gateway_url}/api/v1/cluster/resolve-home?key={self.engine_id}"
+            self.logger.info(f"[GatewayConnector] Resolving home gateway via: {resolver_url}")
+            res = requests.get(resolver_url, timeout=5.0)
+            res.raise_for_status()
+            data = res.json()
+            home_url = data.get("home_url")
+            if not home_url:
+                raise ValueError("Resolver did not return 'home_url'")
+            self.logger.info(f"[GatewayConnector] Home gateway resolved to: {data.get('home_id')}")
+            return home_url
+        except Exception as e:
+            self.logger.error(f"[GatewayConnector] CRITICAL: Failed to resolve home gateway: {e}")
+            self.logger.warning("[GatewayConnector] Fallback: connecting to default GATEWAY_API_URL.")
+            return self.gateway_url
+
+    def set_kernel_services(self, kernel_services: dict):
+        self.kernel_services = kernel_services
+        self.logger.info(f"Kernel services injected. {len(self.kernel_services)} services loaded.")
+
+        event_bus = self.kernel_services.get("event_bus")
+        if event_bus:
+            self.logger.info("[GatewayConnector] Subscribing to main event bus for GUI forwarding.")
+            event_bus.subscribe("*", "gateway_gui_forwarder", self.forward_event_to_gateway)
+        else:
+            self.logger.error("[GatewayConnector] EventBus not found in kernel_services. GUI forwarding will fail.")
+
+    async def emit_to_gateway(self, event_name: str, payload: dict):
+
+        try:
+            if not self.sio.connected:
+                self.logger.warning(f"[Core Emitter] Cannot send '{event_name}': Socket not connected.")
+                return
+
+            if event_name != 'core:agent_token' and not event_name.startswith('core:request_swarm_task') and event_name != 'core:ping':
+                self.logger.info(f"[Core Emitter] Sending '{event_name}' to Gateway. Session: {payload.get('session_id')}")
+
+            await self.sio.emit(event_name, payload, namespace='/engine-socket')
+
+        except Exception as e:
+            self.logger.error(f"[Core Emitter] Failed to emit '{event_name}': {e}", exc_info=True)
+
+    async def forward_event_to_gateway(self, event_name, subscriber_id, payload):
+        try:
+
+            if not self.sio.connected:
+                return
+
+            GUI_SAFE_EVENTS = [
+                "SHOW_DEBUG_POPUP",
+                "WORKFLOW_EXECUTION_UPDATE",
+                "NODE_METRIC_UPDATE",
+                "WORKFLOW_LOG_ENTRY",
+                "JOB_COMPLETED_CHECK" # Added for debug visibility
+            ]
+
+            if event_name in GUI_SAFE_EVENTS:
+
+                target_user_id = self.user_id
+                if isinstance(payload, dict) and '_target_user_id' in payload:
+                    target_user_id = payload.get('_target_user_id')
+
+                versioned_payload = {
+                    'v': CURRENT_PAYLOAD_VERSION,
+                    'payload': {
+                        'event_name': event_name,
+                        'event_data': payload,
+                        'user_id': target_user_id
+                    }
+                }
+                await self.sio.emit('forward_event_to_gui', versioned_payload, namespace='/engine-socket')
+
+        except Exception as e:
+            self.logger.error(f"[GatewayConnector] Error forwarding event '{event_name}': {e}", exc_info=True)
+
+    def _get_safe_roots(self):
+        roots = [os.path.abspath(self.kernel.project_root_path)]
+
+        user_home = os.path.expanduser('~')
+        common_dirs = ['Desktop', 'Documents', 'Downloads', 'Pictures', 'Music', 'Videos']
+        for d in common_dirs:
+            path = os.path.join(user_home, d)
+            if os.path.isdir(path):
+                roots.append(os.path.abspath(path))
+
+        if PSUTIL_AVAILABLE:
+            try:
+                for partition in psutil.disk_partitions():
+                    roots.append(os.path.abspath(partition.mountpoint))
+            except Exception:
+                pass
+        else:
+            if os.name == "nt":
+                import string
+                for letter in string.ascii_uppercase:
+                    drive = f"{letter}:\\"
+                    if os.path.isdir(drive):
+                        roots.append(drive)
+
+        return sorted(list(set(roots)))
+
+    def register_event_handlers(self):
+        @self.sio.event(namespace='/engine-socket')
+        async def connect():
+            self.logger.info("Attempting to connect to Gateway at {}...".format(self.gateway_url))
+            try:
+                self.logger.info(f"Connection to /engine-socket established. Auth was sent in connect() call.")
+
+                # (English Hardcode) Start the watchdog immediately upon connection
+                if self._watchdog_task is None or self._watchdog_task.done():
+                    self._watchdog_task = asyncio.create_task(self._run_watchdog())
+
+            except Exception as e:
+                self.logger.error(f"Error during connect event: {e}", exc_info=True)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def auth_success(data):
+            user_id = data.get('user_id')
+            self.user_id = user_id
+            self.logger.info(f"Engine authenticated successfully for user: {user_id}")
+
+            try:
+                await asyncio.sleep(0.5)
+
+                api_server = self.kernel_services.get("api_server_service")
+                loc_manager = self.kernel_services.get("localization_manager")
+
+                if not api_server or not loc_manager:
+                    self.logger.error("[GatewayConnector] CRITICAL: ApiServer or LocalizationManager not found in kernel_services. Cannot send 'engine_ready'.")
+                    return
+
+                port = loc_manager.get_setting("webhook_port", 8990)
+
+                internal_host = "flowork_core"
+                internal_api_url = f"http://{internal_host}:{port}"
+                self.internal_api_url = internal_api_url
+
+
+                ready_payload_v2 = {
+                    'internal_api_url': internal_api_url,
+                    'engine_id': self.engine_id,
+                    'user_id': self.user_id,
+                    'capabilities': ['workflow', 'datasets', 'variables']
+                }
+                await self.sio.emit('engine_ready', ready_payload_v2, namespace='/engine-socket')
+                self.logger.info(f"Sent 'engine_ready' to Gateway. Reported internal URL: {internal_api_url}")
+
+                if self._hb_task is None or self._hb_task.done():
+                    self._hb_task = asyncio.create_task(self._engine_heartbeat())
+
+            except Exception as e:
+                self.logger.error(f"Failed to send 'engine_ready' event after auth: {e}", exc_info=True)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def auth_failed(data):
+            error_message = data.get('error')
+            self.logger.error(f"Engine authentication failed: {error_message}")
+            await self.stop()
+
+        @self.sio.event(namespace='/engine-socket')
+        async def disconnect():
+            self.logger.info("Disconnected from Gateway /engine-socket.")
+            try:
+                if self._hb_task and not self._hb_task.done():
+                    self._hb_task.cancel()
+
+                # (English Hardcode) Stop watchdog on disconnect to prevent ghost logging
+                if self._watchdog_task and not self._watchdog_task.done():
+                    self._watchdog_task.cancel()
+                    self.logger.info("[Watchdog] Stopped due to disconnect.")
+
+            except Exception as _:
+                pass
+
+            self.g_active_sessions.clear()
+            self.logger.info("[GatewayConnector] Cleared all active FAC runtimes due to disconnect.")
+
+            self.logger.warning(f"[Gateway R6] Disconnected. Failing {len(self._pending_swarm_tasks)} pending swarm tasks.")
+            async with self._pending_swarm_tasks_lock:
+                for task_id, task_future in self._pending_swarm_tasks.items():
+                    if not task_future.done():
+                        task_future.set_result({"error": "GatewayError: Engine disconnected from Gateway."})
+                self._pending_swarm_tasks.clear()
+
+        @self.sio.event(namespace='/engine-socket')
+        async def filesystem_list_request(data):
+            """
+            Handles file listing requests from Gateway (GUI) via Socket.IO.
+            This is the active handler, not the REST one!
+            """
+            self.logger.info(f"[GatewayConnector] Received 'filesystem_list_request' from Gateway")
+
+            payload = data
+            if isinstance(data, dict) and data.get('v') == CURRENT_PAYLOAD_VERSION:
+                payload = data.get('payload', {})
+
+            req_path = payload.get('path', '')
+
+            normalized_req = os.path.normpath(req_path).replace("\\", "/") if req_path else ""
+            if normalized_req == "/app" or normalized_req.startswith("/app/") or "FLOWORK" in normalized_req.upper():
+                 self.logger.warning(f"[FS] Blocked access to protected path: {req_path}")
+                 await self.sio.emit('FILESYSTEM_LIST_RESPONSE', {
+                        'error': '⛔ Access Denied: Protected System Folder',
+                        'path': req_path
+                    }, namespace='/engine-socket')
+                 return
+
+            try:
+                if not req_path:
+                    items = []
+                    video_paths = ["/mnt/videos", "/host_mnt/c/Users", "/mnt/c/Users", "/mnt"]
+                    for v_path in video_paths:
+                        if os.path.exists(v_path):
+                            label = "📂 Videos (Mounted)" if "videos" in v_path else f"💾 Drive ({v_path})"
+                            items.append({
+                                "name": label,
+                                "is_dir": True,
+                                "path": v_path,
+                                "type": "drive"
+                            })
+
+                    items.append({
+                        "name": "💻 Linux Root (/)",
+                        "is_dir": True,
+                        "path": "/",
+                        "type": "drive"
+                    })
+
+                    response_payload = {'path': '', 'items': items}
+                    await self.sio.emit('FILESYSTEM_LIST_RESPONSE', response_payload, namespace='/engine-socket')
+                    self.logger.info(f"[FS] Sent DRIVE LIST ({len(items)} items)")
+                    return
+
+                target_path = os.path.abspath(req_path)
+
+                if not os.path.isdir(target_path):
+                    await self.sio.emit('FILESYSTEM_LIST_RESPONSE', {
+                        'error': f'Invalid directory: {target_path}',
+                        'path': req_path
+                    }, namespace='/engine-socket')
+                    return
+
+                items = []
+                try:
+                    SYSTEM_FOLDERS = ['proc', 'sys', 'dev', 'run', 'boot', 'etc', 'var', 'tmp', 'usr', 'bin', 'sbin', 'lib', 'lib64', 'opt', 'srv', 'root', 'app']
+
+                    dir_content = sorted(os.listdir(target_path), key=lambda s: s.lower())
+
+                    for item_name in dir_content:
+                        if item_name.startswith('.'): continue
+
+                        if target_path == "/" and item_name in SYSTEM_FOLDERS: continue
+
+                        if "FLOWORK" in item_name.upper(): continue
+
+                        item_path = os.path.join(target_path, item_name)
+                        is_dir = os.path.isdir(item_path)
+                        items.append({
+                            "name": item_name,
+                            "is_dir": is_dir,
+                            "path": os.path.abspath(item_path).replace(os.sep, '/')
+                        })
+
+                except Exception as list_err:
+                    self.logger.error(f"[FS] Error listing dir {target_path}: {list_err}")
+                    await self.sio.emit('FILESYSTEM_LIST_RESPONSE', {
+                        'error': f'Cannot read directory: {str(list_err)}',
+                        'path': req_path
+                    }, namespace='/engine-socket')
+                    return
+
+                response_payload = {
+                    'path': target_path.replace(os.sep, '/'),
+                    'items': items
+                }
+
+                await self.sio.emit('FILESYSTEM_LIST_RESPONSE', response_payload, namespace='/engine-socket')
+                self.logger.info(f"[FS] Sent list response for {target_path} ({len(items)} items)")
+
+            except Exception as e:
+                self.logger.error(f"[FS] Critical error processing request: {e}", exc_info=True)
+                await self.sio.emit('FILESYSTEM_LIST_RESPONSE', {
+                    'error': f'Server Error: {str(e)}',
+                    'path': req_path
+                }, namespace='/engine-socket')
+
+
+        @self.sio.event(namespace='/engine-socket')
+        async def request_presets_list(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                self.logger.error(f"[Core] Received non-versioned 'request_presets_list'. Ignoring.")
+                return
+            real_data = data.get('payload', {})
+            user_context = real_data.get('user_context', {})
+            user_id = user_context.get('id')
+            self.logger.info(f"Received 'request_presets_list' from user {user_id}")
+            try:
+                preset_manager = self.kernel_services.get("preset_manager_service")
+                if preset_manager:
+                    presets = preset_manager.get_preset_list(user_id)
+                    versioned_response = {
+                        'v': CURRENT_PAYLOAD_VERSION,
+                        'payload': {'presets': presets, '_target_user_id': user_id}
+                    }
+                    await self.sio.emit('response_presets_list', versioned_response, namespace='/engine-socket')
+                    self.logger.info(f"Sent preset list to user {user_id}. Count: {len(presets)}")
+                else:
+                    self.logger.error("'preset_manager_service' not found in kernel services.")
+                    versioned_response = {'v': CURRENT_PAYLOAD_VERSION, 'payload': {'presets': [], 'error': 'Preset service unavailable', '_target_user_id': user_id}}
+                    await self.sio.emit('response_presets_list', versioned_response, namespace='/engine-socket')
+            except Exception as e:
+                self.logger.error(f"Error processing 'request_presets_list': {e}", exc_info=True)
+                versioned_response = {'v': CURRENT_PAYLOAD_VERSION, 'payload': {'presets': [], 'error': str(e), '_target_user_id': user_id}}
+                await self.sio.emit('response_presets_list', versioned_response, namespace='/engine-socket')
+
+        @self.sio.event(namespace='/engine-socket')
+        async def execute_workflow(data):
+            execution_id = None
+            workflow_id = None
+            try:
+                if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                    self.logger.error(f"[Core] Received non-versioned 'execute_workflow'. Ignoring.")
+                    return
+                real_data = data.get('payload', {})
+                user_context = real_data.get('user_context', {})
+                user_id = user_context.get('id')
+                execution_id = real_data.get('job_id')
+                workflow_id = real_data.get('preset_name')
+                initial_payload = real_data.get('initial_payload', {})
+                workflow_data = real_data.get('workflow_data', {})
+                start_node_id = real_data.get('start_node_id')
+
+                global_loop_config = workflow_data.get('global_loop_config')
+                if global_loop_config:
+                      workflow_executor = self.kernel_services.get("workflow_executor_service")
+                      if workflow_executor and hasattr(workflow_executor, 'set_execution_loop_config'):
+                          workflow_executor.set_execution_loop_config(execution_id, global_loop_config, workflow_id)
+                          self.logger.info(f"[Loop] Registered loop config for {execution_id}: {global_loop_config}")
+                      else:
+                          self.logger.warning(f"[Loop] Failed to register loop config. Executor service missing or incompatible.")
+
+                force_strategy = real_data.get("strategy")
+                context = {"force_strategy": force_strategy} if force_strategy else {}
+                strategy = self.router.pick(context)
+                self.logger.info(f"(R5) Strategy selected for {execution_id}: {strategy}")
+
+                self.logger.info(f"Received 'execute_workflow' for user {user_id} (Exec ID: {execution_id}")
+                db_service = Singleton.get_instance(DatabaseService)
+                if not db_service:
+                    self.logger.error("'db_service' not found. Cannot execute.")
+                    return
+                nodes = workflow_data.get('nodes', [])
+                edges = workflow_data.get('connections', [])
+                target_node_ids = {edge['target'] for edge in edges}
+                if start_node_id:
+                    starting_nodes = [start_node_id]
+                    self.logger.info(f"Starting workflow {execution_id} from specific node: {start_node_id}")
+                else:
+                    starting_nodes = [node['id'] for node in nodes if node['id'] not in target_node_ids]
+                if not starting_nodes:
+                    self.logger.warning(f"Workflow {workflow_id} has no starting nodes. Execution stopped.")
+                    return
+                conn = db_service.create_connection()
+                if not conn:
+                    self.logger.error("Failed to create DB connection. Cannot queue jobs.")
+                    return
+                try:
+                    cursor = conn.cursor()
+                    self.logger.info(f"Ensuring parent workflow '{workflow_id}' exists in DB...")
+                    cursor.execute(
+                        "INSERT OR IGNORE INTO Workflows (workflow_id, name) VALUES (?, ?)",
+                        (workflow_id, workflow_id)
+                    )
+                    cursor.execute(
+                        "INSERT INTO Executions (execution_id, workflow_id, user_id, status, strategy) VALUES (?, ?, ?, ?, ?)",
+                        (execution_id, workflow_id, user_id, 'RUNNING', strategy)
+                    )
+
+                    self.logger.info(f"Inserting/Updating {len(nodes)} node definitions into DB for Workflow: {workflow_id}")
+                    nodes_to_insert = []
+                    for node in nodes:
+                        nodes_to_insert.append((
+                            node.get('id'),
+                            workflow_id,
+                            node.get('module_id'),
+                            json.dumps(node.get('config_values', {}))
+                        ))
+
+                    if nodes_to_insert:
+                        cursor.executemany(
+                            "INSERT OR REPLACE INTO Nodes (node_id, workflow_id, node_type, config_json) VALUES (?, ?, ?, ?)",
+                            nodes_to_insert
+                        )
+                        self.logger.info(f"Successfully inserted/replaced {len(nodes_to_insert)} node definitions.")
+
+                    cursor.execute("DELETE FROM Edges WHERE workflow_id = ?", (workflow_id,))
+                    edges_to_insert = []
+                    for edge in edges:
+                        edges_to_insert.append((
+                            workflow_id,
+                            edge.get('source'),
+                            edge.get('target'),
+                            edge.get('source_port_name') or edge.get('sourceHandle'), # GUI sends sourceHandle
+                            edge.get('target_port_name') or edge.get('targetHandle')  # GUI sends targetHandle
+                        ))
+
+                    if edges_to_insert:
+                        cursor.executemany(
+                            "INSERT INTO Edges (workflow_id, source_node_id, target_node_id, source_handle, target_handle) VALUES (?, ?, ?, ?, ?)",
+                            edges_to_insert
+                        )
+                        self.logger.info(f"Successfully inserted {len(edges_to_insert)} edge definitions with routing handles.")
+
+
+                    jobs_to_insert = []
+                    for node_id in starting_nodes:
+                        job_id = str(uuid.uuid4())
+                        jobs_to_insert.append((
+                            job_id,
+                            execution_id,
+                            node_id,
+                            'PENDING',
+                            json.dumps(initial_payload),
+                            workflow_id,
+                            user_id
+                        ))
+                    cursor.executemany(
+                        "INSERT INTO Jobs (job_id, execution_id, node_id, status, input_data, workflow_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        jobs_to_insert
+                    )
+                    conn.commit()
+                    self.logger.info(f"Successfully queued {len(starting_nodes)} starting jobs in DB for Exec ID: {execution_id}")
+                    try:
+                        job_event = Singleton.get_instance(multiprocessing.Event)
+                        if job_event:
+                            job_event.set()
+                            self.logger.debug(f"Job event (bell) set for Exec ID: {execution_id}")
+                        else:
+                            self.logger.error("Failed to get job_event from Singleton. Workers may not wake up immediately.")
+                    except Exception as e:
+                        self.logger.error(f"Error while setting job_event (bell): {e}", exc_info=True)
+                except sqlite3.IntegrityError as ie:
+                    conn.rollback()
+                    self.logger.error(f"DB IntegrityError for Exec ID {execution_id} (Workflow ID: {workflow_id}): {ie}", exc_info=False)
+                    self.logger.warning(f"This is likely a 'ghost' workflow from a stale GUI cache. Sending error to user.")
+                    try:
+                        event_bus = self.kernel_services.get("event_bus")
+                        if event_bus:
+                            event_bus.publish(
+                                "WORKFLOW_EXECUTION_UPDATE",
+                                {
+                                    "job_id": execution_id,
+                                    "status_data": {
+                                        "status": "FAILED",
+                                        "error_message": f"Database Error: Workflow ID '{workflow_id}' not found. This can happen after a system rebuild. Please re-save your workflow and try again.",
+                                        "end_time": time.time(),
+                                    },
+                                    "_target_user_id": user_id
+                                },
+                            )
+                    except Exception as e_event:
+                        self.logger.error(f"Failed to publish execution failure event: {e_event}")
+                except Exception as e:
+                    conn.rollback()
+                    self.logger.error(f"Failed to insert jobs into DB: {e}", exc_info=True)
+                    try:
+                        event_bus = self.kernel_services.get("event_bus")
+                        if event_bus:
+                            event_bus.publish(
+                                "WORKFLOW_EXECUTION_UPDATE",
+                                {
+                                    "job_id": execution_id,
+                                    "status_data": {
+                                        "status": "FAILED",
+                                        "error_message": f"Core Engine Error: {str(e)}",
+                                        "end_time": time.time(),
+                                    },
+                                    "_target_user_id": user_id
+                                },
+                            )
+                    except Exception as e_event:
+                        self.logger.error(f"Failed to publish generic execution failure event: {e_event}")
+
+                finally:
+                    conn.close()
+            except Exception as e:
+                self.logger.error(f"Error handling 'execute_workflow': {e}", exc_info=True)
+                try:
+                    event_bus = self.kernel_services.get("event_bus")
+                    if event_bus and execution_id:
+                        event_bus.publish(
+                            "WORKFLOW_EXECUTION_UPDATE",
+                            {
+                                "job_id": execution_id,
+                                "status_data": {
+                                    "status": "FAILED",
+                                    "error_message": f"Core Engine Critical Error: {str(e)}",
+                                    "end_time": time.time(),
+                                },
+                                "_target_user_id": user_id
+                            },
+                        )
+                except Exception as e_event:
+                    self.logger.error(f"Failed to publish top-level execution failure event: {e_event}")
+
+        @self.sio.event(namespace='/engine-socket')
+        async def execute_standalone_node(data):
+            execution_id = None
+            try:
+                if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                    self.logger.error(f"[Core] Received non-versioned 'execute_standalone_node'. Ignoring.")
+                    return
+
+                real_data = data.get('payload', {})
+                user_context = real_data.get('user_context', {})
+                user_id = user_context.get('id')
+                execution_id = real_data.get('job_id')
+                node_data = real_data.get('node_data')
+                initial_payload = real_data.get('initial_payload', {})
+                mode = real_data.get('mode', 'EXECUTE')
+
+                if not node_data or not node_data.get('module_id'):
+                    self.logger.error(f"No 'node_data' in 'execute_standalone_node' payload.")
+                    return
+
+                workflow_id = f"standalone__{node_data.get('module_id')}"
+
+                self.logger.info(f"Received 'execute_standalone_node' for user {user_id} (Exec ID: {execution_id}")
+
+                db_service = Singleton.get_instance(DatabaseService)
+                if not db_service:
+                    self.logger.error("'db_service' not found. Cannot execute.")
+                    return
+
+                node_data['id'] = node_data.get('module_id') # (English Hardcode) Standalone nodes use module_id as node_id
+                nodes = [node_data]
+                edges = []
+                starting_nodes = [node_data['id']]
+
+                conn = db_service.create_connection()
+                if not conn:
+                    self.logger.error("Failed to create DB connection. Cannot queue jobs.")
+                    return
+
+                try:
+                    cursor = conn.cursor()
+                    self.logger.info(f"Ensuring parent workflow '{workflow_id}' exists in DB...")
+                    cursor.execute(
+                        "INSERT OR IGNORE INTO Workflows (workflow_id, name) VALUES (?, ?)",
+                        (workflow_id, workflow_id)
+                    )
+
+                    self.logger.info(f"Ensuring parent execution '{execution_id}' exists in DB...")
+                    cursor.execute(
+                        "INSERT OR IGNORE INTO Executions (execution_id, workflow_id, user_id, status, strategy) VALUES (?, ?, ?, ?, ?)",
+                        (execution_id, workflow_id, user_id, 'RUNNING', 'fast') # (English Hardcode) Use 'fast' strategy for standalone
+                    )
+
+                    self.logger.info(f"Inserting/Updating {len(nodes)} node definitions into DB for Workflow: {workflow_id}")
+                    nodes_to_insert = [(
+                        node.get('id'),
+                        workflow_id,
+                        node.get('module_id'),
+                        json.dumps(node.get('config_values', {}))
+                    ) for node in nodes]
+
+                    if nodes_to_insert:
+                        cursor.executemany(
+                            "INSERT OR REPLACE INTO Nodes (node_id, workflow_id, node_type, config_json) VALUES (?, ?, ?, ?)",
+                            nodes_to_insert
+                        )
+
+                    jobs_to_insert = []
+                    for node_id in starting_nodes:
+                        job_id = execution_id # (English Hardcode) Use the exact job_id from GUI
+                        jobs_to_insert.append((
+                            job_id,
+                            execution_id, # (English Hardcode) Use job_id as execution_id for standalone
+                            node_id,
+                            'PENDING',
+                            json.dumps(initial_payload),
+                            workflow_id,
+                            user_id
+                        ))
+                    cursor.executemany(
+                        "INSERT INTO Jobs (job_id, execution_id, node_id, status, input_data, workflow_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        jobs_to_insert
+                    )
+                    conn.commit()
+                    self.logger.info(f"Successfully queued 1 standalone job in DB for Exec ID: {execution_id}")
+
+                    try:
+                        job_event = Singleton.get_instance(multiprocessing.Event)
+                        if job_event:
+                            job_event.set()
+                            self.logger.debug(f"Job event (bell) set for Exec ID: {execution_id}")
+                        else:
+                            self.logger.error("Failed to get job_event from Singleton. Workers may not wake up immediately.")
+                    except Exception as e:
+                        self.logger.error(f"Error while setting job_event (bell): {e}", exc_info=True)
+
+                except Exception as e:
+                    conn.rollback()
+                    self.logger.error(f"Failed to insert standalone job into DB: {e}", exc_info=True)
+                finally:
+                    conn.close()
+
+            except Exception as e:
+                self.logger.error(f"Error handling 'execute_standalone_node': {e}", exc_info=True)
+
+
+        @self.sio.on('stop_workflow', namespace='/engine-socket')
+        async def on_stop_workflow(data):
+            try:
+                self.logger.info(f"[Core] Received 'stop_workflow' from Gateway.")
+                if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                    self.logger.error(f"[Core] Non-versioned 'stop_workflow'. Ignoring.")
+                    return
+
+                payload = data.get('payload', {})
+                execution_id = payload.get('job_id')
+                user_id = payload.get('user_context', {}).get('id')
+
+                if not execution_id:
+                    self.logger.error(f"[Core] 'stop_workflow' received without 'job_id'. Ignoring.")
+                    return
+
+                db_service = Singleton.get_instance(DatabaseService)
+                if not db_service:
+                    self.logger.error("'db_service' not found. Cannot stop workflow.")
+                    return
+
+                conn = db_service.create_connection()
+                if not conn:
+                    self.logger.error("Failed to create DB connection. Cannot stop workflow.")
+                    return
+
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE Executions SET status = 'STOPPED' WHERE execution_id = ?", (execution_id,))
+                    cursor.execute("UPDATE Jobs SET status = 'CANCELLED' WHERE execution_id = ? AND status = 'PENDING'", (execution_id,))
+                    conn.commit()
+                    self.logger.info(f"[Core] Workflow {execution_id} marked as STOPPED. All pending jobs cancelled.")
+
+                    event_bus = self.kernel_services.get("event_bus")
+                    if event_bus:
+                        event_bus.publish(
+                            "WORKFLOW_EXECUTION_UPDATE",
+                            {
+                                "job_id": execution_id,
+                                "status_data": {
+                                    "status": "STOPPED",
+                                    "end_time": time.time(),
+                                },
+                                "_target_user_id": user_id
+                            },
+                        )
+
+                except Exception as e:
+                    conn.rollback()
+                    self.logger.error(f"Failed to update DB for 'stop_workflow' {execution_id}: {e}", exc_info=True)
+                finally:
+                    conn.close()
+
+            except Exception as e:
+                self.logger.error(f"Error handling 'stop_workflow': {e}", exc_info=True)
+
+        @self.sio.on('pause_workflow', namespace='/engine-socket')
+        async def on_pause_workflow(data):
+            try:
+                self.logger.info(f"[Core] Received 'pause_workflow' from Gateway.")
+                if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                    self.logger.error(f"[Core] Non-versioned 'pause_workflow'. Ignoring.")
+                    return
+
+                payload = data.get('payload', {})
+                execution_id = payload.get('job_id')
+                user_id = payload.get('user_context', {}).get('id')
+
+                if not execution_id:
+                    self.logger.error(f"[Core] 'pause_workflow' received without 'job_id'. Ignoring.")
+                    return
+
+                db_service = Singleton.get_instance(DatabaseService)
+                if not db_service:
+                    self.logger.error("'db_service' not found. Cannot pause workflow.")
+                    return
+
+                conn = db_service.create_connection()
+                if not conn:
+                    self.logger.error("Failed to create DB connection. Cannot pause workflow.")
+                    return
+
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE Executions SET status = 'PAUSED' WHERE execution_id = ?", (execution_id,))
+                    cursor.execute("UPDATE Jobs SET status = 'PAUSED' WHERE execution_id = ? AND status = 'PENDING'", (execution_id,))
+                    conn.commit()
+                    self.logger.info(f"[Core] Workflow {execution_id} marked as PAUSED. All pending jobs paused.")
+
+                    event_bus = self.kernel_services.get("event_bus")
+                    if event_bus:
+                        event_bus.publish(
+                            "WORKFLOW_EXECUTION_UPDATE",
+                            {
+                                "job_id": execution_id,
+                                "status_data": {
+                                    "status": "PAUSED",
+                                },
+                                "_target_user_id": user_id
+                            },
+                        )
+
+                except Exception as e:
+                    conn.rollback()
+                    self.logger.error(f"Failed to update DB for 'pause_workflow' {execution_id}: {e}", exc_info=True)
+                finally:
+                    conn.close()
+
+            except Exception as e:
+                self.logger.error(f"Error handling 'pause_workflow': {e}", exc_info=True)
+
+
+        @self.sio.event(namespace='/engine-socket')
+        async def save_preset(data):
+            preset_name = None
+            try:
+                if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                    self.logger.error(f"[Core] Received non-versioned 'save_preset'. Ignoring.")
+                    return
+                real_data = data.get('payload', {})
+                user_context = real_data.get('user_context', {})
+                user_id = user_context.get('id')
+                public_address = user_context.get('public_address')
+                preset_name = real_data.get('name')
+                preset_data = real_data.get('workflow_data')
+                signature = real_data.get('signature')
+                if not signature:
+                    self.logger.error(f"Received 'save_preset' without signature from user {user_id}. Ignoring.")
+                    return
+
+                self.logger.info(f"Received 'save_preset' request from user {user_id} for preset: {preset_name}")
+                preset_manager = self.kernel_services.get("preset_manager_service")
+                if not preset_manager:
+                    self.logger.error("'preset_manager_service' not found. Cannot save preset.")
+                    return
+                try:
+                    preset_manager.save_preset(
+                        name=preset_name,
+                        workflow_data=preset_data,
+                        user_id=user_id,
+                        signature=signature,
+                        public_address=public_address # (English Hardcode) ADDED BY BEO
+                    )
+                    self.logger.info(f"Successfully saved preset {preset_name} for user {user_id}")
+                except Exception as e:
+                    self.logger.error(f"Could not save preset '{preset_name}': {e}", exc_info=True)
+            except Exception as e:
+                self.logger.error(f"Error handling 'save_preset' (outer try): {e}", exc_info=True)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def request_variables(data):
+            try:
+                if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                    self.logger.error(f"[Core] Received non-versioned 'request_variables'. Ignoring.")
+                    return
+                real_data = data.get('payload', {})
+                user_id = real_data.get('user_context', {}).get('id')
+                self.logger.info(f"Received 'request_variables' from user {user_id}")
+                variable_manager = Singleton.get_instance(VariableManagerService)
+                variables_list = []
+                if variable_manager:
+                    variables_list = variable_manager.get_all_variables_for_api(user_id=user_id)
+                else:
+                    self.logger.error("VariableManagerService not found in Singleton. Cannot get variables.")
+                versioned_response = {
+                    'v': CURRENT_PAYLOAD_VERSION,
+                    'payload': {'variables': variables_list, '_target_user_id': user_id}
+                }
+                await self.sio.emit('response_variables', versioned_response, namespace='/engine-socket')
+                self.logger.info(f"Sent 'response_variables' back to user {user_id}")
+            except Exception as e:
+                self.logger.error(f"Error handling 'request_variables': {e}", exc_info=True)
+
+
+        @self.sio.event(namespace='/engine-socket')
+        async def request_components_list(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                self.logger.error(f"[Core] Received non-versioned 'request_components_list'. Ignoring.")
+                return
+
+            real_data = data.get('payload', {})
+            user_context = real_data.get('user_context', {})
+            user_id = user_context.get('id')
+            component_type = real_data.get('component_type')
+            self.logger.info(f"Received 'request_components_list' from user {user_id} for type: {component_type}")
+
+            manager_map = {
+                'modules': 'module_manager_service',
+                'plugins': 'plugin_manager_service',
+                'tools': 'tools_manager_service',
+                'triggers': 'trigger_manager_service'
+            }
+            manager_name = manager_map.get(component_type)
+            components_list = []
+            error_msg = None
+
+            if manager_name:
+                manager = self.kernel_services.get(manager_name)
+                if manager:
+                    try:
+                        items_attr_map = {
+                            "module_manager_service": "loaded_modules",
+                            "plugin_manager_service": "loaded_plugins",
+                            "tools_manager_service": "loaded_tools",
+                            "trigger_manager_service": "loaded_triggers",
+                        }
+                        items_attr_name = items_attr_map.get(manager.service_id)
+                        items = getattr(manager, items_attr_name, {})
+
+                        for item_id_loop, item_data in items.items():
+                            manifest = item_data.get("manifest", {})
+                            components_list.append(
+                                {
+                                    "id": item_id_loop,
+                                    "name": manifest.get("name", item_id_loop),
+                                    "version": manifest.get("version", "N/A"),
+                                    "is_paused": item_data.get("is_paused", False),
+                                    "description": manifest.get("description", ""),
+                                    "is_core": False,
+                                    "tier": manifest.get("tier", "free"),
+                                    "is_installed": item_data.get("is_installed", False),
+                                    "manifest": manifest,
+                                }
+                            )
+                    except Exception as e:
+                        error_msg = f"Error processing component list: {e}"
+                        self.logger.error(f"[Core] {error_msg}", exc_info=True)
+                else:
+                    error_msg = f"Component manager '{manager_name}' not found."
+                    self.logger.error(f"[Core] {error_msg}")
+            else:
+                error_msg = f"Invalid component type '{component_type}'."
+                self.logger.error(f"[Core] {error_msg}")
+
+            versioned_response = {'v': CURRENT_PAYLOAD_VERSION, 'payload': {
+                'component_type': component_type,
+                'components': components_list,
+                'error': error_msg,
+                '_target_user_id': user_id
+            }}
+            await self.sio.emit('response_component_list', versioned_response, namespace='/engine-socket')
+            self.logger.info(f"Sent 'response_component_list' for {component_type} to user {user_id}. Count: {len(components_list)}")
+
+        @self.sio.event(namespace='/engine-socket')
+        async def request_settings(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                self.logger.error(f"[Core] Received non-versioned 'request_settings'. Ignoring.")
+                return
+
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            self.logger.info(f"Received 'request_settings' from user {user_id}")
+            settings_data = {}
+            error_msg = None
+            try:
+                loc_manager = self.kernel_services.get("localization_manager")
+                if loc_manager:
+                    settings_data = loc_manager.get_all_settings(user_id=user_id)
+                else:
+                    error_msg = "LocalizationManager not found."
+            except Exception as e:
+                error_msg = str(e)
+                self.logger.error(f"[Core] Error processing 'request_settings': {e}", exc_info=True)
+
+            versioned_response = {'v': CURRENT_PAYLOAD_VERSION, 'payload': {
+                'settings': settings_data,
+                'error': error_msg,
+                '_target_user_id': user_id
+            }}
+            await self.sio.emit('settings_response', versioned_response, namespace='/engine-socket')
+            self.logger.info(f"Sent 'settings_response' to user {user_id}")
+
+        @self.sio.event(namespace='/engine-socket')
+        async def save_settings(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                self.logger.error(f"[Core] Received non-versioned 'save_settings'. Ignoring.")
+                return
+
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            settings_to_save = real_data.get('settings')
+            self.logger.info(f"Received 'save_settings' from user {user_id}")
+            try:
+                loc_manager = self.kernel_services.get("localization_manager")
+                if loc_manager:
+                    loc_manager._save_settings(settings_to_save, user_id=user_id)
+                else:
+                    raise Exception("LocalizationManager not found.")
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'save_settings': {e}", exc_info=True)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def update_variable(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            var_name = real_data.get('name')
+            var_data = real_data.get('data')
+            self.logger.info(f"Received 'update_variable' from user {user_id} for var: {var_name}")
+            try:
+                var_manager = Singleton.get_instance(VariableManagerService)
+                if var_manager:
+                    var_manager.set_variable(
+                        var_name,
+                        var_data.get('value'),
+                        var_data.get('is_secret', False),
+                        var_data.get('is_enabled', True),
+                        mode=var_data.get('mode', 'single'),
+                        user_id=user_id
+                    )
+            except Exception as e:
+                    self.logger.error(f"[Core] Error processing 'update_variable': {e}", exc_info=True)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def delete_variable(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            var_name = real_data.get('name')
+            self.logger.info(f"Received 'delete_variable' from user {user_id} for var: {var_name}")
+            try:
+                var_manager = Singleton.get_instance(VariableManagerService)
+                if var_manager:
+                    var_manager.delete_variable(var_name, user_id=user_id)
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'delete_variable': {e}", exc_info=True)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def request_prompts_list(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            self.logger.info(f"Received 'request_prompts_list' from user {user_id}")
+            prompts_list = []
+            error_msg = None
+            try:
+                prompt_manager = self.kernel_services.get("prompt_manager_service")
+                if prompt_manager:
+                    prompts_list = prompt_manager.get_all_prompts()
+                else:
+                    error_msg = "PromptManagerService not found."
+            except Exception as e:
+                error_msg = str(e)
+                self.logger.error(f"[Core] Error processing 'request_prompts_list': {e}", exc_info=True)
+
+            versioned_response = {'v': CURRENT_PAYLOAD_VERSION, 'payload': {
+                'prompts': prompts_list,
+                'error': error_msg,
+                '_target_user_id': user_id
+            }}
+            await self.sio.emit('response_prompts_list', versioned_response, namespace='/engine-socket')
+            self.logger.info(f"Sent 'response_prompts_list' to user {user_id}")
+
+        @self.sio.event(namespace='/engine-socket')
+        async def update_prompt(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            prompt_data = real_data.get('prompt_data')
+            self.logger.info(f"Received 'update_prompt' from user {user_id}")
+            try:
+                prompt_manager = self.kernel_services.get("prompt_manager_service")
+                if prompt_manager:
+                    if 'id' in prompt_data and prompt_data['id']:
+                        prompt_manager.update_prompt(prompt_data['id'], prompt_data)
+                    else:
+                        prompt_manager.create_prompt(prompt_data)
+                    await request_prompts_list(data)
+                else:
+                    raise Exception("PromptManagerService not found.")
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'update_prompt': {e}", exc_info=True)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def delete_prompt(data):
+            """ (English Hardcode) Handles delete prompt from Gateway """
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION:
+                return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            prompt_id = real_data.get('prompt_id')
+            self.logger.info(f"Received 'delete_prompt' from user {user_id} for prompt: {prompt_id}")
+            try:
+                prompt_manager = self.kernel_services.get("prompt_manager_service")
+                if prompt_manager:
+                    prompt_manager.delete_prompt(prompt_id)
+                    await request_prompts_list(data)
+                else:
+                    raise Exception("PromptManagerService not found.")
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'delete_prompt': {e}", exc_info=True)
+
+
+        @self.sio.event(namespace='/engine-socket')
+        async def request_local_models(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            self.logger.info(f"Received 'request_local_models' from user {user_id}")
+            models_list = []
+            error_msg = None
+            try:
+                ai_manager = self.kernel_services.get("ai_provider_manager_service")
+                if ai_manager:
+                    models_list = [
+                        {"id": model_id, "name": model_data.get("name", model_id)}
+                        for model_id, model_data in ai_manager.local_models.items()
+                        if model_data.get("category") == "text"
+                    ]
+                else:
+                    error_msg = "AIProviderManagerService not found."
+            except Exception as e:
+                error_msg = str(e)
+            versioned_response = {'v': CURRENT_PAYLOAD_VERSION, 'payload': {'models': models_list, 'error': error_msg, '_target_user_id': user_id}}
+            await self.sio.emit('response_local_models', versioned_response, namespace='/engine-socket')
+
+        @self.sio.event(namespace='/engine-socket')
+        async def start_training_job(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            config = real_data.get('config')
+            self.logger.info(f"Received 'start_training_job' from user {user_id} for {config.get('new_model_name')}")
+            job_response = None
+            try:
+                training_service = self.kernel_services.get("ai_training_service")
+                if training_service:
+                    job_response = training_service.start_fine_tuning_job(
+                        base_model_id=config.get('base_model_id'),
+                        dataset_name=config.get('dataset_name'),
+                        new_model_name=config.get('new_model_name'),
+                        training_args=config.get('training_args', {})
+                    )
+                    await request_training_job_status(data)
+                else:
+                    raise Exception("AITrainingService not found.")
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'start_training_job': {e}", exc_info=True)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def request_training_job_status(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            self.logger.info(f"Received 'request_training_job_status' from user {user_id}")
+            jobs_list = []
+            error_msg = None
+            try:
+                training_service = self.kernel_services.get("ai_training_service")
+                if training_service:
+                    jobs_list = list(training_service.training_jobs.values())
+                else:
+                    error_msg = "AITrainingService not found."
+            except Exception as e:
+                error_msg = str(e)
+            versioned_response = {'v': CURRENT_PAYLOAD_VERSION, 'payload': {'jobs': jobs_list, 'error': error_msg, '_target_user_id': user_id}}
+            await self.sio.emit('response_training_job_status', versioned_response, namespace='/engine-socket')
+
+        @self.sio.event(namespace='/engine-socket')
+        async def request_datasets_list(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            self.logger.info(f"Received 'request_datasets_list' from user {user_id}")
+            datasets_list = []
+            error_msg = None
+            try:
+                dataset_manager = self.kernel_services.get("dataset_manager_service")
+                if dataset_manager:
+                    datasets_list = dataset_manager.list_datasets()
+                else:
+                    error_msg = "DatasetManagerService not found."
+            except Exception as e:
+                error_msg = str(e)
+            versioned_response = {'v': CURRENT_PAYLOAD_VERSION, 'payload': {'datasets': datasets_list, 'error': error_msg, '_target_user_id': user_id}}
+            await self.sio.emit('response_datasets_list', versioned_response, namespace='/engine-socket')
+
+        @self.sio.event(namespace='/engine-socket')
+        async def load_dataset_data(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            name = real_data.get('name')
+            self.logger.info(f"Received 'load_dataset_data' from user {user_id} for {name}")
+            dataset_data = []
+            error_msg = None
+            try:
+                dataset_manager = self.kernel_services.get("dataset_manager_service")
+                if dataset_manager:
+                    dataset_data = dataset_manager.get_dataset_data(name)
+                else:
+                    error_msg = "DatasetManagerService not found."
+            except Exception as e:
+                error_msg = str(e)
+            versioned_response = {'v': CURRENT_PAYLOAD_VERSION, 'payload': {'data': dataset_data, 'error': error_msg, '_target_user_id': user_id}}
+            await self.sio.emit('response_dataset_data', versioned_response, namespace='/engine-socket')
+
+        @self.sio.event(namespace='/engine-socket')
+        async def create_dataset(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            name = real_data.get('name')
+            self.logger.info(f"Received 'create_dataset' from user {user_id} for {name}")
+            try:
+                dataset_manager = self.kernel_services.get("dataset_manager_service")
+                if dataset_manager:
+                    dataset_manager.create_dataset(name)
+                    await request_datasets_list(data)
+                else:
+                    raise Exception("DatasetManagerService not found.")
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'create_dataset': {e}", exc_info=True)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def add_dataset_data(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            name = real_data.get('name')
+            rows = real_data.get('data')
+            self.logger.info(f"Received 'add_dataset_data' from user {user_id} for {name}")
+            try:
+                dataset_manager = self.kernel_services.get("dataset_manager_service")
+                if dataset_manager:
+                    dataset_manager.add_data_to_dataset(name, rows)
+                    await load_dataset_data(data)
+                else:
+                    raise Exception("DatasetManagerService not found.")
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'add_dataset_data': {e}", exc_info=True)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def delete_dataset(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            name = real_data.get('name')
+            self.logger.info(f"Received 'delete_dataset' from user {user_id} for {name}")
+            try:
+                dataset_manager = self.kernel_services.get("dataset_manager_service")
+                if dataset_manager:
+                    dataset_manager.delete_dataset(name)
+                    await request_datasets_list(data)
+                else:
+                    raise Exception("DatasetManagerService not found.")
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'delete_dataset': {e}", exc_info=True)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def update_dataset_row(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            name = real_data.get('name')
+            row_data = real_data.get('row_data')
+            self.logger.info(f"Received 'update_dataset_row' from user {user_id} for {name}")
+            try:
+                dataset_manager = self.kernel_services.get("dataset_manager_service")
+                if dataset_manager:
+                    dataset_manager.update_dataset_row(name, row_data)
+                    await load_dataset_data(data)
+                else:
+                    raise Exception("DatasetManagerService not found.")
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'update_dataset_row': {e}", exc_info=True)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def delete_dataset_row(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            name = real_data.get('name')
+            row_id = real_data.get('row_id')
+            self.logger.info(f"Received 'delete_dataset_row' from user {user_id} for {name}")
+            try:
+                dataset_manager = self.kernel_services.get("dataset_manager_service")
+                if dataset_manager:
+                    dataset_manager.delete_dataset_row(name, row_id)
+                    await load_dataset_data(data)
+                else:
+                    raise Exception("DatasetManagerService not found.")
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'delete_dataset_row': {e}", exc_info=True)
+
+
+        @self.sio.event(namespace='/engine-socket')
+        async def install_component(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            component_type = real_data.get('component_type')
+            component_id = real_data.get('component_id')
+            self.logger.info(f"Received 'install_component' from user {user_id} for {component_id}")
+
+            manager_map = {
+                'modules': 'module_manager_service',
+                'plugins': 'plugin_manager_service',
+                'tools': 'tools_manager_service',
+                'triggers': 'trigger_manager_service'
+            }
+            manager_name = manager_map.get(component_type)
+            manager = self.kernel_services.get(manager_name)
+
+            if not manager:
+                self.logger.error(f"Cannot install {component_id}: Manager {manager_name} not found.")
+                return
+
+            def on_complete(cid, success, message):
+                self.logger.info(f"Install complete for {cid}: Success={success}, Msg={message}")
+                async def send_update():
+                    versioned_response = {'v': CURRENT_PAYLOAD_VERSION, 'payload': {
+                        'component_id': cid,
+                        'component_type': component_type,
+                        'success': success,
+                        'message': message,
+                        'is_installed': True,
+                        '_target_user_id': user_id
+                    }}
+                    await self.sio.emit('component_install_status', versioned_response, namespace='/engine-socket')
+                    await request_components_list(data)
+                try:
+                    asyncio.run_coroutine_threadsafe(send_update(), asyncio.get_event_loop())
+                except RuntimeError:
+                    self.logger.warning("[Install Callback] No event loop, trying asyncio.run()")
+                    try:
+                        asyncio.run(send_update())
+                    except Exception as e:
+                        self.logger.error(f"[Install Callback] asyncio.run() failed: {e}")
+
+
+            manager.install_component_dependencies(component_id, on_complete)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def uninstall_component(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            component_type = real_data.get('component_type')
+            component_id = real_data.get('component_id')
+            self.logger.info(f"Received 'uninstall_component' from user {user_id} for {component_id}")
+
+            manager_map = {
+                'modules': 'module_manager_service',
+                'plugins': 'plugin_manager_service',
+                'tools': 'tools_manager_service',
+                'triggers': 'trigger_manager_service'
+            }
+            manager_name = manager_map.get(component_type)
+            manager = self.kernel_services.get(manager_name)
+
+            if not manager:
+                self.logger.error(f"Cannot uninstall {component_id}: Manager {manager_name} not found.")
+                return
+
+            def on_complete(cid, success, message):
+                self.logger.info(f"Uninstall complete for {cid}: Success={success}, Msg={message}")
+                async def send_update():
+                    versioned_response = {'v': CURRENT_PAYLOAD_VERSION, 'payload': {
+                        'component_id': cid,
+                        'component_type': component_type,
+                        'success': success,
+                        'message': message,
+                        'is_installed': False,
+                        '_target_user_id': user_id
+                    }}
+                    await self.sio.emit('component_install_status', versioned_response, namespace='/engine-socket')
+                    await request_components_list(data)
+                try:
+                    asyncio.run_coroutine_threadsafe(send_update(), asyncio.get_event_loop())
+                except RuntimeError:
+                    self.logger.warning("[Uninstall Callback] No event loop, trying asyncio.run()")
+                    try:
+                        asyncio.run(send_update())
+                    except Exception as e:
+                        self.logger.error(f"[Uninstall Callback] asyncio.run() failed: {e}")
+
+            manager.uninstall_component_dependencies(component_id, on_complete)
+
+
+        @self.sio.event(namespace='/engine-socket')
+        async def gw_start_session(data):
+            session_id = data.get('session_id')
+            engine_id = data.get('engine_id')
+            fac_dict = data.get('fac')
+            self.logger.info(f"[Core] Received 'gw:start_session' from Gateway for session: {session_id}")
+
+            try:
+                if not all([session_id, engine_id, fac_dict]):
+                    self.logger.warning(f"[Auth] 'gw:start_session' missing session_id, engine_id, or fac.")
+                    raise PermissionDeniedError("Invalid start payload (missing session_id, engine_id, or fac)")
+
+                fac_rt = FacRuntime(fac_dict)
+
+                fac_rt.permit_run_engine(engine_id_to_run=engine_id)
+
+                self.g_active_sessions[session_id] = fac_rt
+                self.logger.info(f"FAC Validated. Storing runtime for session {session_id}.")
+
+                agent_executor = self.kernel_services.get("agent_executor_service")
+                if not agent_executor:
+                    self.logger.error("[Core] CRITICAL: 'agent_executor_service' not found in kernel_services. Cannot start session.")
+                    await self.emit_to_gateway('core:agent_error', {
+                        'session_id': data.get('session_id'),
+                        'code': 'SERVICE_NOT_FOUND',
+                        'message': 'AgentExecutorService is not running on this Core engine.'
+                    })
+                    return
+
+                asyncio.create_task(agent_executor.start_session(data, self.emit_to_gateway, fac_rt=fac_rt))
+
+                await self.emit_to_gateway('core:agent_ack', {
+                    'type': 'ack',
+                    'corr': 'start',
+                    'session_id': data.get('session_id')
+                })
+
+            except (PermissionError, PermissionDeniedError, ValueError) as e:
+                self.logger.error(f"[Core] FAC Validation FAILED for session {session_id}: {e}", exc_info=False)
+                await self.emit_to_gateway('core:agent_error', {
+                    'session_id': data.get('session_id'),
+                    'code': 'FAC_INVALID',
+                    'message': f'Session rejected: {e}'
+                })
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'gw:start_session': {e}", exc_info=True)
+                try:
+                    await self.emit_to_gateway('core:agent_error', {
+                        'session_id': data.get('session_id'),
+                        'code': 'START_EXCEPTION',
+                        'message': f'Core engine failed to start session: {e}'
+                    })
+                except Exception as e2:
+                    self.logger.error(f"[Core] Failed to even send the error back: {e2}")
+
+
+        @self.sio.event(namespace='/engine-socket')
+        async def gw_cancel_session(data):
+            session_id = data.get('session_id')
+            self.logger.info(f"[Core] Received 'gw:cancel_session' from Gateway for session: {session_id}")
+
+            if session_id in self.g_active_sessions:
+                del self.g_active_sessions[session_id]
+                self.logger.info(f"[Core] Removed active FAC runtime for cancelled session {session_id}.")
+
+            try:
+                agent_executor = self.kernel_services.get("agent_executor_service")
+                if not agent_executor:
+                    self.logger.error(f"[Core] 'agent_executor_service' not found. Cannot cancel session {session_id}.")
+                    return
+
+                asyncio.create_task(agent_executor.cancel_session(data))
+
+                await self.emit_to_gateway('core:agent_ack', {
+                    'type': 'ack',
+                    'corr': 'cancel',
+                    'session_id': session_id
+                })
+
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'gw:cancel_session': {e}", exc_info=True)
+
+
+        @self.sio.event(namespace='/engine-socket')
+        async def gw_agent_input(data):
+            session_id = data.get('session_id')
+            self.logger.info(f"[Core] Received 'gw:agent_input' from Gateway for session: {session_id}")
+
+            fac_rt = self.g_active_sessions.get(session_id)
+            if not fac_rt:
+                self.logger.warning(f"[Core] Input for {session_id} rejected: No valid FAC runtime found. (Session may have expired or failed start).")
+                await self.emit_to_gateway('core:agent_error', {
+                    'session_id': session_id,
+                    'code': 'SESSION_INVALID',
+                    'message': 'No valid session runtime found. Please restart session.'
+                })
+                return
+
+            try:
+
+                agent_executor = self.kernel_services.get("agent_executor_service")
+                if not agent_executor:
+                    self.logger.error(f"[Core] 'agent_executor_service' not found. Cannot process input for {session_id}.")
+                    await self.emit_to_gateway('core:agent_error', {
+                        'session_id': session_id,
+                        'code': 'SERVICE_NOT_FOUND',
+                        'message': 'AgentExecutorService is not running on this Core engine.'
+                    })
+                    return
+
+                asyncio.create_task(agent_executor.handle_input(data))
+
+                await self.emit_to_gateway('core:agent_ack', {
+                    'type': 'ack',
+                    'corr': 'input',
+                    'session_id': session_id
+                })
+
+            except (PermissionError, PermissionDeniedError) as e:
+                self.logger.error(f"[Core] Budget Error processing 'gw:agent_input' for {session_id}: {e}", exc_info=True)
+                await self.emit_to_gateway('core:agent_error', {
+                    'session_id': session_id,
+                    'code': 'BUDGET_EXCEEDED',
+                    'message': f'Input rejected: {e}'
+                })
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'gw:agent_input': {e}", exc_info=True)
+                try:
+                    await self.emit_to_gateway('core:agent_error', {
+                        'session_id': session_id,
+                        'code': 'INPUT_EXCEPTION',
+                        'message': f'Core engine failed to process input: {e}'
+                    })
+                except Exception as e2:
+                    self.logger.error(f"[Core] Failed to even send the input error back: {e2}")
+
+        @self.sio.event(namespace='/engine-socket')
+        async def gateway_execute_swarm_task(data):
+            task_payload = data.get('task_payload', {})
+            task_id = task_payload.get('task_id')
+
+            if not task_id:
+                self.logger.error(f"[Gateway R6] Received 'gateway_execute_swarm_task' with no task_id. Ignoring.")
+                return
+
+            self.logger.info(f"[Gateway R6] Received task {task_id} from Gateway. Executing...")
+
+            agent_executor = self.kernel_services.get("agent_executor_service")
+            if not agent_executor:
+                self.logger.error(f"[Gateway R6] Cannot execute task {task_id}: AgentExecutorService not found.")
+                result = {"error": "EngineError: AgentExecutorService not found."}
+            else:
+                try:
+
+                    result = await agent_executor.execute_remote_swarm_task(task_payload)
+
+                except Exception as e:
+                    self.logger.error(f"[Gateway R6] Execution of task {task_id} FAILED: {e}", exc_info=True)
+                    result = {"error": f"EngineError: {e}"}
+
+            self.logger.info(f"[Gateway R6] Execution for {task_id} complete. Sending result back to Gateway.")
+
+            await self.emit_to_gateway('core:swarm_task_result', {
+                "task_id": task_id,
+                "result": result
+            })
+
+        @self.sio.event(namespace='/engine-socket')
+        async def gateway_swarm_task_result(data):
+            task_id = data.get('task_id')
+            result = data.get('result', {})
+
+            if not task_id:
+                self.logger.error(f"[Gateway R6] Received 'gateway_swarm_task_result' with no task_id. Dropping.")
+                return
+
+            self.logger.info(f"[Gateway R6] Received result for *our* pending task: {task_id}")
+
+            async with self._pending_swarm_tasks_lock:
+                task_future = self._pending_swarm_tasks.get(task_id)
+
+            if task_future and not task_future.done():
+                task_future.set_result(result)
+            else:
+                self.logger.warning(f"[Gateway R6] Received result for unknown or already-timed-out task {task_id}. Ignoring.")
+
+        @self.sio.event(namespace='/engine-socket')
+        async def delete_preset(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            preset_name = real_data.get('name')
+            self.logger.info(f"Received 'delete_preset' from user {user_id} for preset: {preset_name}")
+            try:
+                preset_manager = self.kernel_services.get("preset_manager_service")
+                if preset_manager:
+                    preset_manager.delete_preset(preset_name, user_id=user_id)
+                    self.logger.info(f"Successfully deleted preset '{preset_name}' for user {user_id}")
+                    await request_presets_list({'v': CURRENT_PAYLOAD_VERSION, 'payload': real_data})
+                else:
+                    raise Exception("PresetManagerService not found.")
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'delete_preset': {e}", exc_info=True)
+
+        @self.sio.event(namespace='/engine-socket')
+        async def request_load_preset(data):
+            if not isinstance(data, dict) or data.get('v') != CURRENT_PAYLOAD_VERSION: return
+            real_data = data.get('payload', {})
+            user_id = real_data.get('user_context', {}).get('id')
+            preset_name = real_data.get('name')
+            self.logger.info(f"Received 'request_load_preset' from user {user_id} for preset: {preset_name}")
+
+            preset_data = None
+            error_msg = None
+            try:
+                preset_manager = self.kernel_services.get("preset_manager_service")
+                if preset_manager:
+                    preset_data = preset_manager.get_preset_data(preset_name, user_id=user_id)
+                    if preset_data is None:
+                        error_msg = "Preset not found."
+                else:
+                    error_msg = "PresetManagerService not found."
+            except Exception as e:
+                self.logger.error(f"[Core] Error processing 'request_load_preset': {e}", exc_info=True)
+                error_msg = str(e)
+
+            versioned_response = {'v': CURRENT_PAYLOAD_VERSION, 'payload': {
+                'name': preset_name,
+                'workflow_data': preset_data,
+                'error': error_msg,
+                '_target_user_id': user_id
+            }}
+            await self.sio.emit('response_load_preset', versioned_response, namespace='/engine-socket')
+            self.logger.info(f"Sent 'response_load_preset' to user {user_id} for preset '{preset_name}'")
+
+
+        @self.sio.on('*', namespace='/engine-socket')
+        async def catch_all(event, data):
+            known_events = [
+                'connect',
+                'auth_success',
+                'auth',
+                'auth_failed',
+                'disconnect',
+                'request_presets_list',
+                'save_preset',
+                'request_variables',
+                'engine_ready',
+                'engine_vitals_update',
+                'forward_event_to_gui',
+                'execute_workflow',
+                'request_components_list',
+                'request_settings',
+                'save_settings',
+                'update_variable',
+                'delete_variable',
+                'request_prompts_list',
+                'update_prompt',
+                'delete_prompt',
+                'request_local_models',
+                'start_training_job',
+                'request_training_job_status',
+                'request_datasets_list',
+                'load_dataset_data',
+                'create_dataset',
+                'add_dataset_data',
+                'delete_dataset',
+                'update_dataset_row',
+                'delete_dataset_row',
+                'install_component',
+                'uninstall_component',
+                'gw:start_session',
+                'gw:cancel_session',
+                'gw:agent_input',
+                'stop_workflow',
+                'pause_workflow',
+                'gateway:execute_swarm_task',
+                'gateway:swarm_task_result',
+                'core:request_swarm_task',
+                'core:swarm_task_result',
+                'delete_preset',
+                'request_load_preset',
+                'response_load_preset',
+                'execute_standalone_node',
+                'filesystem_list_request' # Added to known events
+            ]
+            if event not in known_events:
+                self.logger.warning(f"Received unhandled event '{event}' in /engine-socket namespace.")
+
+    async def _engine_heartbeat(self):
+        self.logger.info("[GatewayConnector] Heartbeat task started.")
+        try:
+            while True:
+                try:
+                    cpu_usage = psutil.cpu_percent(interval=None)
+                    mem = psutil.virtual_memory()
+
+                    payload = {
+                        'engine_id': self.engine_id,
+                        'user_id': self.user_id,
+                        'internal_api_url': self.internal_api_url,
+                        'ts': int(time.time()),
+                        'cpu_percent': cpu_usage,
+                        'memory_percent': mem.percent,
+                        'metrics': {
+                            'pid': os.getpid(),
+                            'active_fac_sessions': len(self.g_active_sessions),
+                            'cpuPercent': cpu_usage,       # (English Hardcode) Added for redundancy
+                            'memoryPercent': mem.percent  # (English Hardcode) Added for redundancy
+                        }
+                    }
+
+                    await self.sio.emit('engine_vitals_update', payload, namespace='/engine-socket')
+                except Exception as e:
+                    self.logger.error(f"[GatewayConnector] Heartbeat error: {e}", exc_info=True)
+                await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            self.logger.info("[GatewayConnector] Heartbeat task cancelled.")
+        except Exception as e:
+            self.logger.error(f"[GatewayConnector] Heartbeat task crashed: {e}", exc_info=True)
+
+    async def start(self):
+        if not self.engine_id or not self.engine_token or not self.gateway_url:
+            self.logger.error("GatewayConnectorService not properly set up. Missing URL, Engine ID or Token.")
+            return
+        self.logger.info(f"Starting GatewayConnectorService, resolving home gateway from {self.gateway_url}...")
+        resolved_http_url = self._resolve_home_gateway()
+
+        if resolved_http_url.startswith("https://"):
+            connect_url = resolved_http_url.replace("https://", "wss://")
+        else:
+            connect_url = resolved_http_url.replace("http://", "ws://")
+
+        socketio_path = "/api/socket.io"
+        self.logger.info(f"[GatewayConnector] Connecting to WebSocket at: {connect_url} with path {socketio_path}")
+
+        auth_payload = {
+            'engine_id': self.engine_id,
+            'token': self.engine_token
+        }
+
+        while True:
+            try:
+                await self.sio.connect(
+                    connect_url,
+                    headers={"Authorization": f"Bearer {self.engine_token}"},
+                    auth=auth_payload,
+                    namespaces=['/engine-socket'],
+                    socketio_path=socketio_path
+                )
+                self.logger.info(f"[GatewayConnector] Initial connection successful to {connect_url}")
+                await self.sio.wait()
+            except socketio.exceptions.ConnectionError as e:
+                self.logger.error(f"Failed to connect to Gateway at {connect_url}: {e}. Retrying in 5 seconds...")
+            except Exception as e:
+                self.logger.error(f"An unexpected error occurred in GatewayConnectorService: {e}", exc_info=True)
+            finally:
+                self.logger.info("GatewayConnectorService stopped. Will attempt to restart connection loop.")
+                await asyncio.sleep(5)
+
+    async def stop(self):
+        self.logger.info("Stopping GatewayConnectorService...")
+        try:
+            if self._hb_task and not self._hb_task.done():
+                self._hb_task.cancel()
+            if self.sio.connected:
+                await self.sio.disconnect()
+        except Exception as e:
+            self.logger.error(f"Error during disconnect: {e}", exc_info=True)

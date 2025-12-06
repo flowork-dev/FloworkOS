@@ -1,0 +1,49 @@
+{
+    "id": "folder_purge_v1",
+    "name": "Folder Purge (Cleaner)",
+    "version": "1.0.0",
+    "icon_file": "icon.png",
+    "author": "Flowork User",
+    "description": "Utility: Wipes ALL files & subfolders inside a target directory.",
+    "category": "Utility",
+    "type": "ACTION",
+    "entry_point": "processor.FolderPurge",
+    "tier": "builder",
+    "behaviors": [],
+    "requires_services": ["logger"],
+    "properties": [],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "1. Target Zone"
+        },
+        {
+            "id": "target_folder",
+            "type": "string",
+            "label": "Folder to Clean",
+            "component": "folder_picker",
+            "description": "WARNING: Everything inside this folder will be PERMANENTLY deleted.",
+            "icon": "mdi-delete-empty",
+            "required": true
+        },
+        {
+            "id": "safety_lock",
+            "type": "toggle",
+            "label": "CONFIRM: I know what I'm doing",
+            "default": false,
+            "icon": "mdi-alert-octagon",
+            "description": "Safety switch. Must be ON to execute delete."
+        }
+    ],
+    "output_ports": [
+        {"name": "success", "display_name": "Success"},
+        {"name": "error", "display_name": "Error"}
+    ],
+    "output_schema": [
+        {
+            "name": "data.deleted_count",
+            "type": "integer",
+            "description": "Number of items removed."
+        }
+    ]
+}

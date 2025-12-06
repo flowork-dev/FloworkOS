@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flux Neural Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Palette: Modern AI - Deep Blue, Cyan, Purple */
+            --bg-core: #030508;
+            --glass-panel: rgba(10, 20, 35, 0.75);
+            --glass-border: rgba(100, 200, 255, 0.15);
+            --neon-cyan: #00f3ff;
+            --neon-purple: #bc13fe;
+            --neon-green: #0aff60;
+            --text-main: #e0f0ff;
+            --text-dim: #5a7b9c;
+        }
+
+        * { box-sizing: border-box; outline: none; user-select: none; }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-cyan); }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-core);
+            color: var(--text-main);
+            font-family: 'Orbitron', sans-serif; /* Font Judul Tech */
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* Background Grid Halus */
+            background-image:
+                linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* --- LAYOUT UTAMA --- */
+        .main-frame {
+            flex: 1;
+            display: flex;
+            border: 1px solid var(--glass-border);
+            margin: 15px;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.4);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.05);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        /* --- KIRI: VIDEO PLAYER --- */
+        .stage-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            border-right: 1px solid var(--glass-border);
+        }
+
+        .viewport {
+            flex: 1;
+            background: #000;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        video { width: 100%; height: 100%; object-fit: contain; }
+
+        /* Tech HUD Elements */
+        .hud-overlay {
+            position: absolute; top: 20px; left: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--neon-cyan);
+            z-index: 10;
+            pointer-events: none;
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(0,0,0,0.6);
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 243, 255, 0.3);
+        }
+        .status-indicator {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--text-dim);
+            box-shadow: 0 0 5px var(--text-dim);
+        }
+        .status-indicator.active {
+            background: var(--neon-green);
+            box-shadow: 0 0 8px var(--neon-green);
+        }
+
+        .drop-hint {
+            position: absolute;
+            color: var(--text-dim);
+            text-align: center;
+            z-index: 5;
+            letter-spacing: 2px;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        /* --- CONTROL BAR --- */
+        .control-panel {
+            height: 70px;
+            background: var(--glass-panel);
+            border-top: 1px solid var(--glass-border);
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            z-index: 20;
+        }
+
+        /* SCRUBBER / PROGRESS BAR (PENTING) */
+        .scrubber-track {
+            position: absolute;
+            top: -6px; left: 0; width: 100%;
+            height: 6px;
+            background: #151a25;
+            cursor: pointer;
+            z-index: 30;
+            transition: height 0.2s ease, background 0.2s;
+        }
+        .scrubber-track:hover {
+            height: 10px;
+            top: -10px;
+            background: #202a3d;
+        }
+
+        .scrubber-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+            position: relative;
+            pointer-events: none; /* Biar klik tembus ke track */
+        }
+        .scrubber-head {
+            position: absolute; right: -2px; top: 0; bottom: 0;
+            width: 4px; background: #fff;
+            box-shadow: 0 0 10px #fff;
+            display: none;
+        }
+        .scrubber-track:hover .scrubber-head { display: block; }
+
+        /* TOMBOL KONTROL */
+        .btn-tech {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--neon-cyan);
+            width: 36px; height: 36px;
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-tech:hover {
+            background: rgba(0, 243, 255, 0.15);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        .btn-tech:active { transform: scale(0.95); }
+        .btn-tech svg { width: 18px; height: 18px; fill: currentColor; }
+
+        .btn-group { display: flex; gap: 8px; align-items: center; }
+
+        .time-counter {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .speed-readout {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--neon-purple);
+            border: 1px solid var(--glass-border);
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            min-width: 50px; text-align: center;
+            transition: 0.2s;
+        }
+        .speed-readout:hover { background: rgba(188, 19, 254, 0.2); border-color: var(--neon-purple); }
+
+        /* VOLUME SLIDER */
+        .vol-wrapper {
+            display: flex; align-items: center; gap: 8px;
+            width: 120px;
+        }
+        input[type=range] {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            height: 14px; width: 14px; border-radius: 50%;
+            background: var(--neon-cyan);
+            margin-top: -5px; cursor: pointer;
+            box-shadow: 0 0 5px var(--neon-cyan);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px;
+            background: var(--glass-border); border-radius: 2px;
+        }
+
+        /* --- KANAN: SIDEBAR (LOG & LIST) --- */
+        .sidebar-section {
+            width: 320px;
+            background: rgba(5, 8, 12, 0.9);
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--glass-border);
+        }
+
+        .side-header {
+            padding: 15px;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            letter-spacing: 1.5px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .btn-add {
+            background: var(--neon-purple); border: none;
+            color: #fff; padding: 4px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem; font-weight: bold;
+            border-radius: 2px; cursor: pointer;
+        }
+        .btn-add:hover { box-shadow: 0 0 10px var(--neon-purple); }
+
+        .playlist-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .track-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid transparent;
+            padding: 10px; margin-bottom: 6px;
+            border-radius: 6px; cursor: pointer;
+            display: flex; align-items: center; gap: 10px;
+            transition: 0.2s;
+        }
+        .track-card:hover { background: rgba(255,255,255,0.08); }
+        .track-card.active {
+            background: rgba(0, 243, 255, 0.1);
+            border-color: var(--neon-cyan);
+        }
+        .track-info {
+            flex: 1; overflow: hidden;
+        }
+        .track-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem; color: #fff;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .track-dur {
+            font-size: 0.7rem; color: var(--text-dim);
+        }
+
+        .log-console {
+            height: 180px;
+            background: #000;
+            border-top: 1px solid var(--glass-border);
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            overflow-y: auto;
+            display: flex; flex-direction: column-reverse;
+        }
+        .log-line { margin-bottom: 4px; }
+        .log-tm { color: var(--neon-purple); margin-right: 5px; }
+        .log-msg { color: var(--text-main); }
+
+        /* Input Hidden */
+        #fileInput { display: none; }
+
+    </style>
+</head>
+<body>
+
+    <div class="main-frame">
+
+        <div class="stage-section">
+            <div class="viewport" id="dropTarget">
+
+                <div class="hud-overlay">
+                    <div class="status-indicator" id="statusDot"></div>
+                    <span id="statusText">SYSTEM STANDBY</span>
+                </div>
+
+                <div class="drop-hint" id="emptyState">
+                    <h3>NEURAL FEED OFFLINE</h3>
+                    <p>INITIATE UPLOAD OR DRAG FOOTAGE</p>
+                </div>
+
+                <video id="videoPlayer" playsinline></video>
+            </div>
+
+            <div class="control-panel">
+                <div class="scrubber-track" id="scrubber">
+                    <div class="scrubber-fill" id="scrubFill">
+                        <div class="scrubber-head"></div>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn-tech" onclick="playPrev()" title="Previous Node">
+                        <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                    </button>
+
+                    <button class="btn-tech" onclick="togglePlay()" id="btnPlayPause">
+                        <svg id="iconPlay" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <svg id="iconPause" viewBox="0 0 24 24" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+
+                    <button class="btn-tech" onclick="stopVideo()" title="Terminate">
+                        <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                    </button>
+
+                    <button class="btn-tech" onclick="playNext()" title="Next Node">
+                        <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                    </button>
+                </div>
+
+                <div class="time-counter" id="timeDisplay">00:00 / 00:00</div>
+
+                <div class="btn-group" style="margin-left: auto;">
+                    <div class="speed-readout" id="speedDisplay" onclick="cycleSpeed()">1.0x</div>
+
+                    <div class="vol-wrapper">
+                        <button class="btn-tech" style="width:24px; border:none;" onclick="toggleMute()">
+                            <svg viewBox="0 0 24 24" id="volIcon"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                        </button>
+                        <input type="range" id="volSlider" min="0" max="1" step="0.05" value="1">
+                    </div>
+
+                    <button class="btn-tech" onclick="toggleFullscreen()">
+                        <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="side-header">
+                DATA STREAM
+                <button class="btn-add" onclick="document.getElementById('fileInput').click()">+ IMPORT</button>
+            </div>
+
+            <div class="playlist-area" id="playlistBox">
+                </div>
+
+            <div class="log-console" id="logger">
+                <div class="log-line"><span class="log-tm">SYS</span> <span class="log-msg">FLUX ENGINE v3.0 ONLINE</span></div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" multiple accept="video/*">
+
+    <script>
+        // --- SYSTEM VARIABLES ---
+        const video = document.getElementById('videoPlayer');
+        const scrubber = document.getElementById('scrubber');
+        const scrubFill = document.getElementById('scrubFill');
+        const playlistBox = document.getElementById('playlistBox');
+        const logger = document.getElementById('logger');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const statusText = document.getElementById('statusText');
+        const statusDot = document.getElementById('statusDot');
+        const emptyState = document.getElementById('emptyState');
+        const speedDisplay = document.getElementById('speedDisplay');
+
+        let playlist = [];
+        let currentIndex = -1;
+        let isDragging = false;
+        let playbackRate = 1.0;
+
+        // --- LOGGER ---
+        function log(msg) {
+            const now = new Date();
+            const time = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+            const div = document.createElement('div');
+            div.className = 'log-line';
+            div.innerHTML = `<span class="log-tm">[${time}]</span> <span class="log-msg">${msg}</span>`;
+            logger.prepend(div);
+        }
+
+        // --- FILE HANDLING ---
+        function handleFiles(files) {
+            let count = 0;
+            for(let f of files) {
+                if(f.type.startsWith('video/')) {
+                    playlist.push(f);
+                    count++;
+                }
+            }
+            if(count > 0) {
+                log(`Imported ${count} new artifacts.`);
+                renderPlaylist();
+                if(currentIndex === -1) loadTrack(0);
+            }
+        }
+
+        function renderPlaylist() {
+            playlistBox.innerHTML = '';
+            playlist.forEach((file, i) => {
+                const div = document.createElement('div');
+                div.className = `track-card ${i === currentIndex ? 'active' : ''}`;
+                div.innerHTML = `
+                    <div class="track-info">
+                        <div class="track-name">${i+1}. ${file.name}</div>
+                        <div class="track-dur">${(file.size / 1024 / 1024).toFixed(1)} MB</div>
+                    </div>
+                `;
+                div.onclick = () => loadTrack(i);
+                playlistBox.appendChild(div);
+            });
+        }
+
+        function loadTrack(index) {
+            if(index < 0 || index >= playlist.length) return;
+            currentIndex = index;
+
+            const file = playlist[index];
+            video.src = URL.createObjectURL(file);
+            video.playbackRate = playbackRate;
+            video.play();
+
+            updateStatus("PLAYING", true);
+            emptyState.style.display = 'none';
+            renderPlaylist();
+            updatePlayBtn(true);
+            log(`Streaming: ${file.name}`);
+        }
+
+        // --- PLAYBACK CONTROLS ---
+        function togglePlay() {
+            if(!video.src) return;
+            if(video.paused) {
+                video.play();
+                updateStatus("PLAYING", true);
+                updatePlayBtn(true);
+            } else {
+                video.pause();
+                updateStatus("PAUSED", false);
+                updatePlayBtn(false);
+            }
+        }
+
+        function stopVideo() {
+            video.pause();
+            video.currentTime = 0;
+            updateStatus("TERMINATED", false);
+            updatePlayBtn(false);
+        }
+
+        function updatePlayBtn(isPlay) {
+            document.getElementById('iconPlay').style.display = isPlay ? 'none' : 'block';
+            document.getElementById('iconPause').style.display = isPlay ? 'block' : 'none';
+        }
+
+        function playNext() {
+            if(playlist.length === 0) return;
+            let next = (currentIndex + 1) % playlist.length;
+            loadTrack(next);
+        }
+
+        function playPrev() {
+            if(playlist.length === 0) return;
+            let prev = (currentIndex - 1 + playlist.length) % playlist.length;
+            loadTrack(prev);
+        }
+
+        function updateStatus(text, active) {
+            statusText.innerText = text;
+            if(active) statusDot.classList.add('active');
+            else statusDot.classList.remove('active');
+        }
+
+        function cycleSpeed() {
+            const speeds = [0.5, 1.0, 1.5, 2.0, 4.0];
+            let idx = speeds.indexOf(playbackRate);
+            playbackRate = speeds[(idx + 1) % speeds.length];
+            video.playbackRate = playbackRate;
+            speedDisplay.innerText = playbackRate + "x";
+            log(`Speed adjusted: ${playbackRate}x`);
+        }
+
+        // --- SCRUBBING LOGIC (THE FIX) ---
+        function updateScrubber(e) {
+            const rect = scrubber.getBoundingClientRect();
+            // Kalkulasi posisi X relatif terhadap width element
+            let percent = (e.clientX - rect.left) / rect.width;
+
+            // Clamp (batasi) antara 0 sampai 1
+            if(percent < 0) percent = 0;
+            if(percent > 1) percent = 1;
+
+            scrubFill.style.width = (percent * 100) + "%";
+
+            // Jika video sudah ready, update waktunya
+            if(video.duration) {
+                video.currentTime = percent * video.duration;
+            }
+        }
+
+        // 1. Mouse Down di Track
+        scrubber.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            updateScrubber(e); // Pindah langsung ke posisi klik
+            if(!video.paused) {
+                video.pause(); // Pause sebentar pas geser biar smooth
+                video.dataset.wasPlaying = "true";
+            }
+        });
+
+        // 2. Mouse Move di Window (biar kalo kursor keluar track tetep ke-drag)
+        window.addEventListener('mousemove', (e) => {
+            if(isDragging) {
+                e.preventDefault(); // Mencegah highlight text
+                updateScrubber(e);
+            }
+        });
+
+        // 3. Mouse Up di Window
+        window.addEventListener('mouseup', (e) => {
+            if(isDragging) {
+                isDragging = false;
+                if(video.dataset.wasPlaying === "true") {
+                    video.play();
+                    delete video.dataset.wasPlaying;
+                }
+            }
+        });
+
+        // --- TIME UPDATE & VOLUME ---
+        video.ontimeupdate = () => {
+            if(!isDragging && video.duration) {
+                const pct = (video.currentTime / video.duration) * 100;
+                scrubFill.style.width = pct + "%";
+            }
+            const cur = fmtTime(video.currentTime);
+            const dur = fmtTime(video.duration || 0);
+            timeDisplay.innerText = `${cur} / ${dur}`;
+        };
+
+        function fmtTime(s) {
+            const m = Math.floor(s/60);
+            const sc = Math.floor(s%60);
+            return `${m<10?'0'+m:m}:${sc<10?'0'+sc:sc}`;
+        }
+
+        document.getElementById('volSlider').oninput = (e) => {
+            video.volume = e.target.value;
+            video.muted = false;
+        };
+
+        function toggleMute() {
+            video.muted = !video.muted;
+            log(video.muted ? "Audio Muted" : "Audio Active");
+        }
+
+        function toggleFullscreen() {
+            const el = document.querySelector('.stage-section'); // Fullscreen area video + control
+            if(!document.fullscreenElement) el.requestFullscreen();
+            else document.exitFullscreen();
+        }
+
+        // --- EVENTS LAIN ---
+        document.getElementById('fileInput').onchange = (e) => handleFiles(e.target.files);
+
+        const dropTarget = document.getElementById('dropTarget');
+        dropTarget.ondragover = (e) => { e.preventDefault(); dropTarget.style.background = '#0a1015'; };
+        dropTarget.ondragleave = (e) => { e.preventDefault(); dropTarget.style.background = '#000'; };
+        dropTarget.ondrop = (e) => {
+            e.preventDefault();
+            dropTarget.style.background = '#000';
+            handleFiles(e.dataTransfer.files);
+        };
+
+        video.onended = () => playNext();
+
+    </script>
+</body>
+</html>

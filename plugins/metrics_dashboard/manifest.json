@@ -1,0 +1,80 @@
+{
+    "id": "metrics_dashboard",
+    "name": "Plugin Dashboard Metrik",
+    "version": "1.1",
+    "icon_file": "icon.png",
+    "author": "Awenk Audico",
+    "email": "Contributor@teetah.art",
+    "website": "www.teetah.art",
+    "description": "Menyediakan UI dashboard untuk menampilkan metrik sistem dan statistik workflow.",
+    "type": "ACTION",
+    "entry_point": "processor.MetricsDashboardModule",
+    "tier": "free",
+    "behaviors": [
+        "retry"
+    ],
+    "requires_services": [
+        "logger",
+        "loc",
+        "state_manager",
+        "kernel"
+    ],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "Dashboard Settings"
+        },
+        {
+            "id": "dashboard_title",
+            "type": "string",
+            "label": "Dashboard Title",
+            "default": "System Health Monitor",
+            "icon": "mdi-monitor-dashboard",
+            "description": "Custom title for the metrics panel."
+        },
+        {
+            "id": "refresh_interval",
+            "type": "integer",
+            "label": "Refresh Interval (ms)",
+            "default": 5000,
+            "min": 1000,
+            "max": 60000,
+            "step": 1000,
+            "icon": "mdi-timer-refresh",
+            "description": "How often the dashboard updates data."
+        },
+        {
+            "component": "header",
+            "label": "Metrics Configuration"
+        },
+        {
+            "id": "tracked_metrics",
+            "type": "list",
+            "label": "Active Metrics",
+            "icon": "mdi-chart-line",
+            "description": "Define which metrics to display.",
+            "schema": [
+                {
+                    "id": "metric_key",
+                    "type": "select",
+                    "label": "Metric Type",
+                    "options": ["CPU Usage", "Memory Usage", "Active Threads", "Task Queue", "Workflow Success Rate"],
+                    "default": "CPU Usage"
+                },
+                {
+                    "id": "alert_threshold",
+                    "type": "integer",
+                    "label": "Alert Threshold",
+                    "default": 80,
+                    "description": "Trigger alert if value exceeds this."
+                }
+            ]
+        }
+    ],
+    "output_ports": [
+        {
+            "name": "success",
+            "display_name": "Success"
+        }
+    ]
+}

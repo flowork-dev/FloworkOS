@@ -1,0 +1,5 @@
+numpy<2.0.0
+yt-dlp
+faster-whisper
+protobuf==3.20.3
+requests
