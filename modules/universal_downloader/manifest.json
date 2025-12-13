@@ -1,0 +1,103 @@
+{
+    "id": "universal_downloader_v1",
+    "name": "Universal Stream Downloader",
+    "version": "1.0.0",
+    "icon_file": "icon.png",
+    "author": "Flowork Dev",
+    "description": "Download videos from YouTube, TikTok, Instagram, & 1000+ sites via yt-dlp.",
+    "category": "Input & Ingestion",
+    "type": "ACTION",
+    "entry_point": "processor.UniversalDownloader",
+    "tier": "builder",
+    "behaviors": ["retry"],
+    "requires_services": ["logger"],
+    "properties": [],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "1. Target Source"
+        },
+        {
+            "id": "url",
+            "type": "string",
+            "label": "Video URL",
+            "placeholder": "https://www.youtube.com/watch?v=...",
+            "description": "Paste the link from YouTube, TikTok, Instagram, etc.",
+            "icon": "mdi-link-variant",
+            "required": true
+        },
+        {
+            "component": "header",
+            "label": "2. Download Settings"
+        },
+        {
+            "id": "format_mode",
+            "type": "select",
+            "label": "Download Format",
+            "default": "best",
+            "icon": "mdi-file-video",
+            "options": [
+                {"label": "Best Video + Audio (Auto Merge)", "value": "best"},
+                {"label": "Best Video Only (No Sound)", "value": "video_only"},
+                {"label": "Best Audio Only (Convert to MP3)", "value": "audio_mp3"},
+                {"label": "Worst Quality (Data Saver)", "value": "worst"}
+            ],
+            "description": "Choose 'Best Video + Audio' for highest quality editing."
+        },
+        {
+            "id": "output_folder",
+            "type": "string",
+            "label": "Save To Folder",
+            "component": "folder_picker",
+            "description": "Where to save the downloaded file.",
+            "icon": "mdi-folder-download",
+            "required": true
+        },
+        {
+            "component": "header",
+            "label": "3. Advanced Access (Optional)"
+        },
+        {
+            "id": "cookie_file",
+            "type": "string",
+            "label": "Cookies File (Netscape Format)",
+            "component": "file_picker",
+            "description": "Required for Age-Restricted or Premium content. Export txt from browser.",
+            "icon": "mdi-cookie"
+        },
+        {
+            "id": "proxy_url",
+            "type": "string",
+            "label": "Proxy URL (Optional)",
+            "placeholder": "http://user:pass@host:port",
+            "icon": "mdi-ip-network",
+            "description": "Use this if the server IP is blocked by YouTube."
+        }
+    ],
+    "output_ports": [
+        {"name": "success", "display_name": "Success"},
+        {"name": "error", "display_name": "Error"}
+    ],
+    "output_schema": [
+        {
+            "name": "data.file_path",
+            "type": "string",
+            "description": "Full path to the downloaded file."
+        },
+        {
+            "name": "data.meta.title",
+            "type": "string",
+            "description": "Video Title."
+        },
+        {
+            "name": "data.meta.uploader",
+            "type": "string",
+            "description": "Channel/Uploader Name."
+        },
+        {
+            "name": "data.meta.duration",
+            "type": "number",
+            "description": "Duration in seconds."
+        }
+    ]
+}

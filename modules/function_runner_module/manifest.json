@@ -1,0 +1,63 @@
+{
+    "id": "function_runner_module",
+    "name": "Function Runner (Nano)",
+    "version": "1.1",
+    "icon_file": "icon.png",
+    "author": "Flowork System",
+    "email": "Contributor@teetah.art",
+    "website": "www.teetah.art",
+    "description": "Executes a small, self-contained Python function. Provides 'payload', 'log', 'kernel', and 'args' context.",
+    "category": "Logic",
+    "type": "LOGIC",
+    "entry_point": "processor.FunctionRunnerModule",
+    "tier": "architect",
+    "behaviors": [
+        "retry"
+    ],
+    "requires_services": [
+        "logger",
+        "kernel"
+    ],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "Function Configuration"
+        },
+        {
+            "id": "function_code",
+            "type": "string",
+            "component": "code_editor",
+            "label": "Python Code",
+            "default": "# Write your python code here\n# Available vars: payload, log, kernel, args, kwargs\n\npayload['processed'] = True\nprint('Function executed!')",
+            "options": {
+                "language": "python",
+                "theme": "dracula",
+                "lineNumbers": true
+            },
+            "description": "Write the Python script to execute. Use 'payload' dict to read/write data.",
+            "required": true
+        },
+        {
+            "component": "header",
+            "label": "Safety Settings"
+        },
+        {
+            "id": "execution_timeout",
+            "type": "integer",
+            "label": "Timeout (Seconds)",
+            "default": 30,
+            "icon": "mdi-timer-alert-outline",
+            "description": "Maximum execution time before forcefully stopping the script."
+        }
+    ],
+    "output_ports": [
+        {
+            "name": "output",
+            "display_name": "Output"
+        },
+        {
+            "name": "error",
+            "display_name": "Error"
+        }
+    ]
+}

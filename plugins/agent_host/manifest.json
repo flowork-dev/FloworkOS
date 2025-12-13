@@ -1,0 +1,106 @@
+{
+    "id": "agent_host",
+    "name": "Agent Host",
+    "version": "2.3",
+    "icon_file": "icon.png",
+    "author": "AWENK AUDICO",
+    "email": "contributor@teetah.art",
+    "website": "www.teetah.art",
+    "description": "Autonomous Agent Runtime. Executes objectives using connected AI Brain and Tools defined in the FAC contract.",
+    "type": "CONTROL_FLOW",
+    "entry_point": "processor.AgentHost",
+    "tier": "architect",
+    "behaviors": [
+        "retry",
+        "await_signal"
+    ],
+    "requires_services": [
+        "logger",
+        "loc",
+        "kernel",
+        "agent_executor_service",
+        "ai_provider_manager_service"
+    ],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "Brain Configuration"
+        },
+        {
+            "id": "ai_provider_id",
+            "type": "string",
+            "label": "AI Provider ID",
+            "default": "openai_gpt4",
+            "icon": "mdi-brain",
+            "description": "The ID of the AI model to power this agent (e.g., 'openai_gpt4', 'anthropic_claude')."
+        },
+        {
+            "component": "header",
+            "label": "Agent Contract (FAC)"
+        },
+        {
+            "id": "fac_contract",
+            "type": "string",
+            "component": "code_editor",
+            "label": "Functional Agent Contract",
+            "default": "{\n  \"objective\": \"Analyze the input and summarize it.\",\n  \"constraints\": [\n    \"Be concise\",\n    \"Do not hallucinate\"\n  ],\n  \"gas_limit\": 10\n}",
+            "options": {
+                "language": "json",
+                "theme": "dracula",
+                "lineNumbers": true
+            },
+            "description": "Define the agent's personality, rules, and operational constraints here.",
+            "required": true
+        },
+        {
+            "component": "header",
+            "label": "Runtime Limits"
+        },
+        {
+            "id": "max_gas",
+            "type": "integer",
+            "label": "Max Execution Steps (Gas)",
+            "default": 10,
+            "min": 1,
+            "max": 50,
+            "icon": "mdi-gas-station",
+            "description": "Safety limit to prevent infinite loops."
+        }
+    ],
+    "input_ports": [
+        {
+            "name": "payload_input",
+            "display_name": "Payload",
+            "tooltip": "Standard data input."
+        }
+    ],
+    "tool_ports": [
+        {
+            "name": "tools_port",
+            "display_name": "External Tools",
+            "tooltip": "Connect external tool modules here."
+        }
+    ],
+    "output_ports": [
+        {
+            "name": "success",
+            "display_name": "Success (Final Answer)"
+        },
+        {
+            "name": "error",
+            "display_name": "Error"
+        }
+    ],
+    "output_schema": [
+        {
+            "name": "data.agent_final_answer",
+            "type": "string",
+            "description": "The final result produced by the agent."
+        },
+        {
+            "name": "data.agent_interaction_log",
+            "type": "list",
+            "description": "Log of thoughts and actions."
+        }
+    ]
+}

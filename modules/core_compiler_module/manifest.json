@@ -1,0 +1,54 @@
+{
+    "id": "core_compiler_module",
+    "name": "Core Service Compiler",
+    "version": "1.1",
+    "icon_file": "icon.png",
+    "author": "Flowork System",
+    "email": "Contributor@teetah.art",
+    "website": "www.teetah.art",
+    "description": "System module that compiles .flowork service definitions into runnable Python service classes.",
+    "category": "System",
+    "type": "ACTION",
+    "entry_point": "processor.CoreCompilerModule",
+    "tier": "architect",
+    "behaviors": [
+        "retry"
+    ],
+    "requires_services": [
+        "kernel",
+        "logger",
+        "loc"
+    ],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "Compiler Settings"
+        },
+        {
+            "id": "clean_build",
+            "type": "boolean",
+            "label": "Force Clean Build",
+            "default": false,
+            "icon": "mdi-delete-sweep",
+            "description": "Wipe generated_services folder before compiling (Caution!)."
+        },
+        {
+            "id": "verbose_log",
+            "type": "boolean",
+            "label": "Verbose Logging",
+            "default": true,
+            "icon": "mdi-text-box-search-outline",
+            "description": "Show detailed compilation status for each service."
+        }
+    ],
+    "output_ports": [
+        {
+            "name": "success",
+            "display_name": "Success"
+        },
+        {
+            "name": "error",
+            "display_name": "Error"
+        }
+    ]
+}

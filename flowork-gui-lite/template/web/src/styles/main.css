@@ -1,0 +1,69 @@
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #161625;
+}
+::-webkit-scrollbar-thumb {
+  background: #4a4a6a;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #5a5a7a;
+}
+
+body {
+    background-color: #0A0F1E;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* --- Global Form Kontras Tinggi --- */
+.v-field__input,
+.v-textarea textarea,
+.v-text-field input,
+.v-select .v-field__input > .v-select__selection > .v-select__selection-text {
+  color: var(--text-primary) !important;
+  font-family: 'Fira Code', 'Courier New', monospace !important;
+}
+.v-field__outline {
+  border-color: var(--border-glow-soft) !important;
+}
+.v-field--focused .v-field__outline {
+  border-width: 2px !important;
+  border-color: var(--border-glow-hard) !important;
+}
+.v-label {
+  color: var(--text-secondary) !important;
+  opacity: 1 !important;
+}
+
+/* --- LUXURY CINEMATIC ZOOM (Modern & Rapi) --- */
+
+/* Durasi & Kurva Animasi (Smooth Easing seperti 'Spring' yang halus) */
+.luxury-zoom-enter-active,
+.luxury-zoom-leave-active {
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Kondisi Awal Masuk: Dari sedikit 'belakang' (Scale 0.96) & Transparan */
+/* Ini memberikan efek kedalaman (Depth) */
+.luxury-zoom-enter-from {
+  opacity: 0;
+  transform: scale(0.96);
+  filter: blur(2px); /* Blur tipis banget buat transisi optik */
+}
+
+/* Kondisi Akhir Keluar: Ke sedikit 'depan' (Scale 1.04) & Transparan */
+/* User seolah 'menembus' halaman lama */
+.luxury-zoom-leave-to {
+  opacity: 0;
+  transform: scale(1.04);
+  filter: blur(2px);
+}

@@ -1,0 +1,40 @@
+{
+    "id": "event_bus_trigger",
+    "name": "Event Bus Trigger",
+    "version": "1.1",
+    "icon_file": "icon.png",
+    "author": "Flowork System",
+    "description": "Listens for specific system events (e.g. 'CUSTOM_EVENT') to start the workflow.",
+    "type": "TRIGGER",
+    "entry_point": "processor.EventBusTriggerModule",
+    "listener_entry_point": "processor.EventBusListener",
+    "tier": "architect",
+    "requires_input": false,
+    "requires_services": [
+        "logger",
+        "loc",
+        "event_bus"
+    ],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "Event Subscription"
+        },
+        {
+            "id": "event_name_to_listen",
+            "type": "string",
+            "label": "Event Topic",
+            "default": "MY_CUSTOM_EVENT",
+            "placeholder": "e.g. ORDER_CREATED",
+            "icon": "mdi-lightning-bolt-outline",
+            "description": "The exact name of the event to listen for.",
+            "required": true
+        }
+    ],
+    "output_ports": [
+        {
+            "name": "output",
+            "display_name": "Trigger"
+        }
+    ]
+}

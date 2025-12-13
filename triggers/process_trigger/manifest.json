@@ -1,0 +1,58 @@
+{
+    "id": "process_trigger",
+    "name": "Process Watcher",
+    "version": "1.1",
+    "icon_file": "icon.png",
+    "author": "Flowork System",
+    "description": "Triggers the workflow when a specific system process starts or stops.",
+    "type": "TRIGGER",
+    "entry_point": "processor.ProcessTriggerModule",
+    "listener_entry_point": "processor.ProcessListener",
+    "tier": "free",
+    "requires_input": false,
+    "requires_services": [
+        "logger",
+        "loc"
+    ],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "Process Target"
+        },
+        {
+            "id": "process_name",
+            "type": "string",
+            "label": "Process Name",
+            "default": "notepad.exe",
+            "placeholder": "e.g. chrome.exe, python",
+            "icon": "mdi-application-cog-outline",
+            "description": "The exact name of the executable to watch (case-insensitive).",
+            "required": true
+        },
+        {
+            "id": "event_to_watch",
+            "type": "select",
+            "label": "Trigger On",
+            "default": "started",
+            "options": ["started", "stopped"],
+            "icon": "mdi-flag-checkered",
+            "description": "When should the workflow run?"
+        },
+        {
+            "id": "check_interval",
+            "type": "integer",
+            "label": "Check Interval (Seconds)",
+            "default": 5,
+            "min": 1,
+            "max": 60,
+            "icon": "mdi-timer-sand",
+            "description": "How often to scan the process list. Lower = faster response but higher CPU usage."
+        }
+    ],
+    "output_ports": [
+        {
+            "name": "output",
+            "display_name": "Process Event"
+        }
+    ]
+}

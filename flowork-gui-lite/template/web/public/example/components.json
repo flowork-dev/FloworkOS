@@ -1,0 +1,1690 @@
+{
+  "modules": [
+    {
+      "id": "content_trend_scanner",
+      "name": "Content Trend Scanner",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "content_trend_scanner",
+        "name": "Content Trend Scanner",
+        "type": "AI",
+        "description": "Monitors Google Trends, Pinterest, and TikTok for rising topics in a specified niche.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "youtube_idea_generator",
+      "name": "YouTube Idea Generator",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "youtube_idea_generator",
+        "name": "YouTube Idea Generator",
+        "type": "AI",
+        "description": "Analyzes popular video titles in a niche and generates new title ideas using AI.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "content_calendar_sync",
+      "name": "Content Calendar Sync",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "content_calendar_sync",
+        "name": "Content Calendar Sync",
+        "type": "PRODUCTIVITY",
+        "description": "Syncs the Flowork content schedule to Google Calendar, Notion, or Trello.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "keyword_researcher",
+      "name": "Keyword Researcher",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "keyword_researcher",
+        "name": "Keyword Researcher",
+        "type": "DATA",
+        "description": "Fetches search volume and competition data for a list of keywords.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "audience_comment_scraper",
+      "name": "Audience Comment Scraper",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "audience_comment_scraper",
+        "name": "Audience Comment Scraper",
+        "type": "WEB",
+        "description": "Scrapes recent comments from YouTube, Instagram, or TikTok to find content ideas or FAQs.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "ai_script_writer",
+      "name": "AI Script Writer",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "ai_script_writer",
+        "name": "AI Script Writer",
+        "type": "AI",
+        "description": "Creates a draft script for a video or blog post based on a given outline and keywords.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "ai_image_generator",
+      "name": "AI Image Generator",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "ai_image_generator",
+        "name": "AI Image Generator",
+        "type": "AI",
+        "description": "Generates images (thumbnails, visual assets) from a text description using Stable Diffusion or DALL-E.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "ai_voiceover_generator",
+      "name": "AI Voiceover Generator",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "ai_voiceover_generator",
+        "name": "AI Voiceover Generator",
+        "type": "AI",
+        "description": "Converts a text script into an audio file (Text-to-Speech) with various voice options.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "ai_article_writer",
+      "name": "AI Article Writer",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "ai_article_writer",
+        "name": "AI Article Writer",
+        "type": "AI",
+        "description": "Writes a complete blog article from a title and a few key points.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "video_silence_remover",
+      "name": "Video Silence Remover",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "video_silence_remover",
+        "name": "Video Silence Remover",
+        "type": "MEDIA",
+        "description": "Automatically cuts silent parts from a video or audio recording.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "auto_subtitle_generator",
+      "name": "Auto Subtitle Generator",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "auto_subtitle_generator",
+        "name": "Auto Subtitle Generator",
+        "type": "AI",
+        "description": "Transcribes audio from a video and generates a subtitle file (SRT) using Whisper.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "intro_outro_stamper",
+      "name": "Intro/Outro Stamper",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "intro_outro_stamper",
+        "name": "Intro/Outro Stamper",
+        "type": "MEDIA",
+        "description": "Automatically adds intro and outro video clips to a main video file.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "watermark_adder",
+      "name": "Watermark Adder",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "watermark_adder",
+        "name": "Watermark Adder",
+        "type": "MEDIA",
+        "description": "Adds a logo or watermark to videos or images in bulk.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "video_format_converter",
+      "name": "Video Format Converter",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "video_format_converter",
+        "name": "Video Format Converter",
+        "type": "MEDIA",
+        "description": "Converts video format and aspect ratio, e.g., from 16:9 (YouTube) to 9:16 (TikTok/Shorts).",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "podcast_audio_enhancer",
+      "name": "Podcast Audio Enhancer",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "podcast_audio_enhancer",
+        "name": "Podcast Audio Enhancer",
+        "type": "MEDIA",
+        "description": "Applies standard audio filters (noise reduction, EQ, compression) to a podcast audio file.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "youtube_uploader",
+      "name": "YouTube Uploader",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "youtube_uploader",
+        "name": "YouTube Uploader",
+        "type": "SOCIAL",
+        "description": "Uploads a video file to YouTube with title, description, tags, and thumbnail.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "tiktok_uploader",
+      "name": "TikTok Uploader",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "tiktok_uploader",
+        "name": "TikTok Uploader",
+        "type": "SOCIAL",
+        "description": "Uploads a video file to TikTok via web, complete with caption and scheduling options.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "instagram_reels_uploader",
+      "name": "Instagram Reels Uploader",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "instagram_reels_uploader",
+        "name": "Instagram Reels Uploader",
+        "type": "SOCIAL",
+        "description": "Uploads a short video clip to Instagram Reels.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "multi_platform_publisher",
+      "name": "Multi-Platform Publisher",
+      "is_core": false,
+      "tier": "architect",
+      "manifest": {
+        "id": "multi_platform_publisher",
+        "name": "Multi-Platform Publisher",
+        "type": "SOCIAL",
+        "description": "Simultaneously uploads one video content to YouTube Shorts, TikTok, and Instagram Reels.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "podcast_episode_publisher",
+      "name": "Podcast Episode Publisher",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "podcast_episode_publisher",
+        "name": "Podcast Episode Publisher",
+        "type": "MEDIA",
+        "description": "Uploads an audio file to a podcast host (e.g., Spotify for Podcasters) and updates the RSS feed.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "blog_post_publisher",
+      "name": "Blog Post Publisher",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "blog_post_publisher",
+        "name": "Blog Post Publisher",
+        "type": "WEB",
+        "description": "Publishes an article to WordPress or Ghost, complete with a featured image and SEO meta.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "bulk_post_scheduler",
+      "name": "Bulk Post Scheduler",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "bulk_post_scheduler",
+        "name": "Bulk Post Scheduler",
+        "type": "PRODUCTIVITY",
+        "description": "Schedules dozens of social media posts from a CSV or Google Sheets file.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "ai_video_clipper",
+      "name": "AI Video Clipper",
+      "is_core": false,
+      "tier": "architect",
+      "manifest": {
+        "id": "ai_video_clipper",
+        "name": "AI Video Clipper",
+        "type": "AI",
+        "description": "Analyzes a long YouTube video and automatically cuts it into several short, viral-style clips.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "video_to_blog_post",
+      "name": "Video to Blog Post",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "video_to_blog_post",
+        "name": "Video to Blog Post",
+        "type": "AI",
+        "description": "Uses AI to transcribe a video and then transforms the transcript into a structured blog article.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "blog_to_social_posts",
+      "name": "Blog to Social Posts",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "blog_to_social_posts",
+        "name": "Blog to Social Posts",
+        "type": "AI",
+        "description": "Extracts key points from an article and converts them into a series of tweets or an Instagram carousel.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "video_to_audiogram",
+      "name": "Video to Audiogram",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "video_to_audiogram",
+        "name": "Video to Audiogram",
+        "type": "MEDIA",
+        "description": "Takes an audio clip from a video, adds a visual waveform and title, and creates a short video for social media.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "podcast_to_carousel",
+      "name": "Podcast to Carousel",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "podcast_to_carousel",
+        "name": "Podcast to Carousel",
+        "type": "MEDIA",
+        "description": "Takes interesting quotes from a podcast transcript and turns them into a series of quote card images for Instagram.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "ai_comment_responder",
+      "name": "AI Comment Responder",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "ai_comment_responder",
+        "name": "AI Comment Responder",
+        "type": "AI",
+        "description": "Analyzes the sentiment of comments (positive, negative, question) and provides draft replies.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "youtube_comment_hearter",
+      "name": "YouTube Comment Heart-er",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "youtube_comment_hearter",
+        "name": "YouTube Comment Heart-er",
+        "type": "SOCIAL",
+        "description": "Automatically gives a 'heart' to all positive comments on a new video.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "discord_welcome_bot",
+      "name": "Discord Welcome Bot",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "discord_welcome_bot",
+        "name": "Discord Welcome Bot",
+        "type": "SOCIAL",
+        "description": "Sends a personalized welcome message to new members on a Discord server.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "community_cross_poster",
+      "name": "Community Cross-Poster",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "community_cross_poster",
+        "name": "Community Cross-Poster",
+        "type": "SOCIAL",
+        "description": "Automatically announces new content (e.g., YouTube video) in Discord, Telegram, and a Facebook Group.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "negative_comment_alerter",
+      "name": "Negative Comment Alerter",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "negative_comment_alerter",
+        "name": "Negative Comment Alerter",
+        "type": "SOCIAL",
+        "description": "Sends a notification to Telegram if a comment contains negative or spammy keywords.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "affiliate_link_manager",
+      "name": "Affiliate Link Manager",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "affiliate_link_manager",
+        "name": "Affiliate Link Manager",
+        "type": "MONETIZATION",
+        "description": "Checks a list of affiliate links to ensure none are broken and reports any dead links.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "sponsorship_report_generator",
+      "name": "Sponsorship Report Generator",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "sponsorship_report_generator",
+        "name": "Sponsorship Report Generator",
+        "type": "MONETIZATION",
+        "description": "Collects metrics (views, likes, comments) from sponsored content and compiles them into a PDF report.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "new_supporter_greeter",
+      "name": "New Supporter Greeter",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "new_supporter_greeter",
+        "name": "New Supporter Greeter",
+        "type": "MONETIZATION",
+        "description": "Sends a personal email or Discord message to new supporters on platforms like Patreon or Ko-fi.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "merch_store_monitor",
+      "name": "Merch Store Monitor",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "merch_store_monitor",
+        "name": "Merch Store Monitor",
+        "type": "MONETIZATION",
+        "description": "Sends a notification if a new product is sold in a merch store (Shopify, Gumroad).",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "multi_platform_stats_fetcher",
+      "name": "Multi-Platform Stats Fetcher",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "multi_platform_stats_fetcher",
+        "name": "Multi-Platform Stats Fetcher",
+        "type": "ANALYTICS",
+        "description": "Fetches basic analytics data from YouTube, TikTok, and Instagram, and consolidates it in one place.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "weekly_performance_reporter",
+      "name": "Weekly Performance Reporter",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "weekly_performance_reporter",
+        "name": "Weekly Performance Reporter",
+        "type": "ANALYTICS",
+        "description": "Sends a weekly performance summary to an email or Telegram every Monday morning.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "best_time_to_post_analyzer",
+      "name": "Best Time to Post Analyzer",
+      "is_core": false,
+      "tier": "architect",
+      "manifest": {
+        "id": "best_time_to_post_analyzer",
+        "name": "Best Time to Post Analyzer",
+        "type": "ANALYTICS",
+        "description": "Analyzes engagement data to recommend the best hours to publish content.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "thumbnail_ab_tester",
+      "name": "Thumbnail A/B Tester",
+      "is_core": false,
+      "tier": "architect",
+      "manifest": {
+        "id": "thumbnail_ab_tester",
+        "name": "Thumbnail A/B Tester",
+        "type": "ANALYTICS",
+        "description": "Changes a YouTube video's thumbnail after 24 hours to see if there is a change in Click-Through Rate (CTR).",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    }
+  ],
+  "plugins": [
+    {
+      "id": "ai_paraphraser",
+      "name": "AI Paraphraser",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "ai_paraphraser",
+        "name": "AI Paraphraser",
+        "type": "PLUGIN",
+        "description": "Rewrites a sentence or paragraph in a different style of language.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "ai_headline_analyzer",
+      "name": "AI Headline Analyzer",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "ai_headline_analyzer",
+        "name": "AI Headline Analyzer",
+        "type": "PLUGIN",
+        "description": "Scores a headline based on its click potential and SEO.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "hashtag_generator",
+      "name": "Hashtag Generator",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "hashtag_generator",
+        "name": "Hashtag Generator",
+        "type": "PLUGIN",
+        "description": "Generates relevant hashtag groups (popular, niche, brand) based on keywords.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "text_cleaner",
+      "name": "Text Cleaner",
+      "is_core": true,
+      "tier": "free",
+      "manifest": {
+        "id": "text_cleaner",
+        "name": "Text Cleaner",
+        "type": "PLUGIN",
+        "description": "Removes double spaces, empty lines, or strange characters from a text.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "profanity_filter",
+      "name": "Profanity Filter",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "profanity_filter",
+        "name": "Profanity Filter",
+        "type": "PLUGIN",
+        "description": "Detects and censors profane words in a text.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "emoji_adder",
+      "name": "Emoji Adder",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "emoji_adder",
+        "name": "Emoji Adder",
+        "type": "PLUGIN",
+        "description": "Automatically adds relevant emojis to social media text.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "csv_to_json_converter",
+      "name": "CSV to JSON Converter",
+      "is_core": true,
+      "tier": "free",
+      "manifest": {
+        "id": "csv_to_json_converter",
+        "name": "CSV to JSON Converter",
+        "type": "PLUGIN",
+        "description": "Converts data from CSV format to JSON.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "url_shortener",
+      "name": "URL Shortener",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "url_shortener",
+        "name": "URL Shortener",
+        "type": "PLUGIN",
+        "description": "Shortens a URL using services like Bitly or TinyURL.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "image_resizer",
+      "name": "Image Resizer",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "image_resizer",
+        "name": "Image Resizer",
+        "type": "PLUGIN",
+        "description": "Resizes an image to specific dimensions (e.g., 1920x1080 for a YouTube thumbnail).",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "image_compressor",
+      "name": "Image Compressor",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "image_compressor",
+        "name": "Image Compressor",
+        "type": "PLUGIN",
+        "description": "Reduces the file size of an image without significant quality loss.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "meme_generator",
+      "name": "Meme Generator",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "meme_generator",
+        "name": "Meme Generator",
+        "type": "PLUGIN",
+        "description": "Adds meme-style text to an image template.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "video_trimmer",
+      "name": "Video Trimmer",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "video_trimmer",
+        "name": "Video Trimmer",
+        "type": "PLUGIN",
+        "description": "Cuts a video based on start and end timestamps.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "gif_creator",
+      "name": "GIF Creator",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "gif_creator",
+        "name": "GIF Creator",
+        "type": "PLUGIN",
+        "description": "Converts a short segment of a video into a GIF file.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "audio_extractor",
+      "name": "Audio Extractor",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "audio_extractor",
+        "name": "Audio Extractor",
+        "type": "PLUGIN",
+        "description": "Extracts the audio track from a video file and saves it as an MP3.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "social_handle_validator",
+      "name": "Social Handle Validator",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "social_handle_validator",
+        "name": "Social Handle Validator",
+        "type": "PLUGIN",
+        "description": "Checks if a username is available on various social media platforms.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "youtube_video_downloader",
+      "name": "YouTube Video Downloader",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "youtube_video_downloader",
+        "name": "YouTube Video Downloader",
+        "type": "PLUGIN",
+        "description": "Downloads a video from YouTube based on its URL.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "website_screenshot_taker",
+      "name": "Website Screenshot Taker",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "website_screenshot_taker",
+        "name": "Website Screenshot Taker",
+        "type": "PLUGIN",
+        "description": "Takes a full-page screenshot of a webpage.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "meta_tag_scraper",
+      "name": "Meta Tag Scraper",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "meta_tag_scraper",
+        "name": "Meta Tag Scraper",
+        "type": "PLUGIN",
+        "description": "Extracts the title, description, and image from an article's URL.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "sentiment_analysis",
+      "name": "Sentiment Analysis",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "sentiment_analysis",
+        "name": "Sentiment Analysis",
+        "type": "PLUGIN",
+        "description": "Provides a sentiment score (positive, negative, neutral) for a text.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "language_detector",
+      "name": "Language Detector",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "language_detector",
+        "name": "Language Detector",
+        "type": "PLUGIN",
+        "description": "Detects the language of a text.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "entity_recognition",
+      "name": "Entity Recognition",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "entity_recognition",
+        "name": "Entity Recognition",
+        "type": "PLUGIN",
+        "description": "Identifies names of people, places, or organizations in an article.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "affiliate_link_cloaker",
+      "name": "Affiliate Link Cloaker",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "affiliate_link_cloaker",
+        "name": "Affiliate Link Cloaker",
+        "type": "PLUGIN",
+        "description": "Converts a long affiliate URL into a shorter, cleaner link.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "invoice_generator",
+      "name": "Invoice Generator",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "invoice_generator",
+        "name": "Invoice Generator",
+        "type": "PLUGIN",
+        "description": "Creates a simple PDF invoice from client data and payment amount.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "currency_converter",
+      "name": "Currency Converter",
+      "is_core": false,
+      "tier": "free",
+      "manifest": {
+        "id": "currency_converter",
+        "name": "Currency Converter",
+        "type": "PLUGIN",
+        "description": "Converts currency values.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "donation_link_generator",
+      "name": "Donation Link Generator",
+      "is_core": false,
+      "tier": "free",
+      "manifest": {
+        "id": "donation_link_generator",
+        "name": "Donation Link Generator",
+        "type": "PLUGIN",
+        "description": "Creates a quick donation URL for platforms like PayPal.Me.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    }
+  ],
+  "tools": [
+    {
+      "id": "ffmpeg_command_runner",
+      "name": "FFmpeg Command Runner",
+      "is_core": false,
+      "tier": "architect",
+      "manifest": {
+        "id": "ffmpeg_command_runner",
+        "name": "FFmpeg Command Runner",
+        "type": "TOOL",
+        "description": "Runs custom FFmpeg commands for advanced video and audio manipulation.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "python_script_runner",
+      "name": "Python Script Runner",
+      "is_core": true,
+      "tier": "architect",
+      "manifest": {
+        "id": "python_script_runner",
+        "name": "Python Script Runner",
+        "type": "TOOL",
+        "description": "Executes a custom Python script written by the user.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "javascript_runner",
+      "name": "JavaScript (Node.js) Runner",
+      "is_core": true,
+      "tier": "architect",
+      "manifest": {
+        "id": "javascript_runner",
+        "name": "JavaScript (Node.js) Runner",
+        "type": "TOOL",
+        "description": "Runs a JavaScript script using Node.js.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "shell_script_runner",
+      "name": "Shell/Bash Script Runner",
+      "is_core": true,
+      "tier": "architect",
+      "manifest": {
+        "id": "shell_script_runner",
+        "name": "Shell/Bash Script Runner",
+        "type": "TOOL",
+        "description": "Executes a shell command or script on the operating system.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "imagemagick_runner",
+      "name": "ImageMagick Runner",
+      "is_core": false,
+      "tier": "architect",
+      "manifest": {
+        "id": "imagemagick_runner",
+        "name": "ImageMagick Runner",
+        "type": "TOOL",
+        "description": "Runs ImageMagick commands for complex image manipulation.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "curl_command_builder",
+      "name": "cURL Command Builder",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "curl_command_builder",
+        "name": "cURL Command Builder",
+        "type": "TOOL",
+        "description": "Builds and runs a cURL request to interact with APIs that do not have a dedicated module.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "browser_automation_runner",
+      "name": "Browser Automation Runner",
+      "is_core": false,
+      "tier": "architect",
+      "manifest": {
+        "id": "browser_automation_runner",
+        "name": "Browser Automation Runner",
+        "type": "TOOL",
+        "description": "Runs a Puppeteer or Selenium script for complex web scraping or interaction tasks.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "sql_query_runner",
+      "name": "SQL Query Runner",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "sql_query_runner",
+        "name": "SQL Query Runner",
+        "type": "TOOL",
+        "description": "Runs a SQL query on a connected database (MySQL, PostgreSQL, SQLite).",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "google_apps_script_executor",
+      "name": "Google Apps Script Executor",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "google_apps_script_executor",
+        "name": "Google Apps Script Executor",
+        "type": "TOOL",
+        "description": "Triggers the execution of a specific function in a Google Apps Script.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "powershell_script_runner",
+      "name": "PowerShell Script Runner",
+      "is_core": true,
+      "tier": "architect",
+      "manifest": {
+        "id": "powershell_script_runner",
+        "name": "PowerShell Script Runner",
+        "type": "TOOL",
+        "description": "Executes a custom PowerShell script (particularly useful for Windows users).",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "applescript_runner",
+      "name": "AppleScript Runner",
+      "is_core": false,
+      "tier": "architect",
+      "manifest": {
+        "id": "applescript_runner",
+        "name": "AppleScript Runner",
+        "type": "TOOL",
+        "description": "Runs an AppleScript to automate applications on macOS.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "r_script_runner",
+      "name": "R Script Runner",
+      "is_core": false,
+      "tier": "architect",
+      "manifest": {
+        "id": "r_script_runner",
+        "name": "R Script Runner",
+        "type": "TOOL",
+        "description": "Executes an R script for data analysis and visualization.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "yt_dlp_runner",
+      "name": "yt-dlp Runner",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "yt_dlp_runner",
+        "name": "yt-dlp Runner",
+        "type": "TOOL",
+        "description": "Runs the 'yt-dlp' command with custom arguments to download video/audio from various sites.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "pandas_script_runner",
+      "name": "Pandas Script Runner",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "pandas_script_runner",
+        "name": "Pandas Script Runner",
+        "type": "TOOL",
+        "description": "Runs a Python code snippet using the Pandas library for tabular data manipulation.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    },
+    {
+      "id": "jupyter_notebook_runner",
+      "name": "Jupyter Notebook Runner",
+      "is_core": false,
+      "tier": "architect",
+      "manifest": {
+        "id": "jupyter_notebook_runner",
+        "name": "Jupyter Notebook Runner",
+        "type": "TOOL",
+        "description": "Executes cells within a Jupyter Notebook file.",
+        "input_ports": [{"name": "input", "display_name": "In"}],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"},
+            {"name": "failure", "display_name": "Failure"}
+        ]
+      }
+    }
+  ],
+  "triggers": [
+    {
+      "id": "schedule_cron_job",
+      "name": "Schedule (Cron Job)",
+      "is_core": true,
+      "tier": "free",
+      "manifest": {
+        "id": "schedule_cron_job",
+        "name": "Schedule (Cron Job)",
+        "type": "TRIGGER",
+        "description": "Starts a workflow at a very specific time (e.g., every Monday at 9 AM).",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "interval",
+      "name": "Interval",
+      "is_core": true,
+      "tier": "free",
+      "manifest": {
+        "id": "interval",
+        "name": "Interval",
+        "type": "TRIGGER",
+        "description": "Starts a workflow repeatedly every X minutes, hours, or days.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "on_system_startup",
+      "name": "On System Startup",
+      "is_core": true,
+      "tier": "free",
+      "manifest": {
+        "id": "on_system_startup",
+        "name": "On System Startup",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when the Flowork Engine first starts.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "new_file_in_folder",
+      "name": "New File in Folder",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "new_file_in_folder",
+        "name": "New File in Folder",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when a new file is added to a specific folder.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "file_modified",
+      "name": "File Modified",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "file_modified",
+        "name": "File Modified",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when a monitored file is modified.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "webhook",
+      "name": "Webhook",
+      "is_core": true,
+      "tier": "free",
+      "manifest": {
+        "id": "webhook",
+        "name": "Webhook",
+        "type": "TRIGGER",
+        "description": "Provides a unique URL that can be called by external services to start a workflow.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "rss_feed_update",
+      "name": "RSS Feed Update",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "rss_feed_update",
+        "name": "RSS Feed Update",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when there is a new entry in an RSS feed (e.g., blog, podcast).",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "new_github_commit",
+      "name": "New GitHub Commit",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "new_github_commit",
+        "name": "New GitHub Commit",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when a new commit is made to a specific branch in a GitHub repository.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "new_youtube_video_by_channel",
+      "name": "New YouTube Video by Channel",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "new_youtube_video_by_channel",
+        "name": "New YouTube Video by Channel",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when a specific YouTube channel uploads a new video.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "new_twitter_mention",
+      "name": "New Mention on X (Twitter)",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "new_twitter_mention",
+        "name": "New Mention on X (Twitter)",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when a specific account is mentioned on X.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "new_social_follower",
+      "name": "New Social Follower",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "new_social_follower",
+        "name": "New Social Follower",
+        "type": "TRIGGER",
+        "description": "Starts a workflow upon gaining a new follower on Instagram or Twitch.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "new_live_stream_started",
+      "name": "New Live Stream Started",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "new_live_stream_started",
+        "name": "New Live Stream Started",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when a Twitch or YouTube channel begins a live broadcast.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "new_discord_message",
+      "name": "New Discord Message in Channel",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "new_discord_message",
+        "name": "New Discord Message in Channel",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when a new message is posted in a specific Discord channel.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "new_telegram_message_with_keyword",
+      "name": "New Telegram Message with Keyword",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "new_telegram_message_with_keyword",
+        "name": "New Telegram Message with Keyword",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when a message containing a specific keyword is posted in a Telegram group.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "new_reddit_post_in_subreddit",
+      "name": "New Reddit Post in Subreddit",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "new_reddit_post_in_subreddit",
+        "name": "New Reddit Post in Subreddit",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when a new post is made in a monitored subreddit.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "new_email_received",
+      "name": "New Email Received",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "new_email_received",
+        "name": "New Email Received",
+        "type": "TRIGGER",
+        "description": "Checks an email inbox and starts a workflow for each new email that matches criteria (sender, subject).",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "new_trello_card_added",
+      "name": "New Trello Card Added",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "new_trello_card_added",
+        "name": "New Trello Card Added",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when a new card is added to a specific Trello list.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "google_calendar_event_start",
+      "name": "Google Calendar Event Start",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "google_calendar_event_start",
+        "name": "Google Calendar Event Start",
+        "type": "TRIGGER",
+        "description": "Starts a workflow a few minutes before an event in Google Calendar begins.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "new_sale_on_platform",
+      "name": "New Sale on Platform",
+      "is_core": false,
+      "tier": "creator",
+      "manifest": {
+        "id": "new_sale_on_platform",
+        "name": "New Sale on Platform",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when a new sale occurs on an e-commerce platform (Gumroad, Shopify).",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    },
+    {
+      "id": "new_supporter_on_platform",
+      "name": "New Supporter on Platform",
+      "is_core": false,
+      "tier": "builder",
+      "manifest": {
+        "id": "new_supporter_on_platform",
+        "name": "New Supporter on Platform",
+        "type": "TRIGGER",
+        "description": "Starts a workflow when someone becomes a new supporter on Patreon or Ko-fi.",
+        "input_ports": [],
+        "output_ports": [
+            {"name": "success", "display_name": "Success"}
+        ]
+      }
+    }
+  ]
+}

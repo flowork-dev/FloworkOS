@@ -1,0 +1,90 @@
+{
+    "id": "media_watermarker_v1",
+    "name": "HydroSeal Branding Unit",
+    "version": "1.5.0",
+    "description": "Professional Video Watermarking with Drag & Drop Positioning.",
+    "author": "Flowork Cyber Division",
+    "category": "Post-Processing",
+    "type": "ACTION",
+    "entry_point": "processor.MediaWatermarker",
+    "tier": "builder",
+    "icon_file": "icon.png",
+    "requires_services": ["logger", "loc", "kernel"],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "1. Source Material"
+        },
+        {
+            "id": "input_path",
+            "type": "string",
+            "label": "Video Path",
+            "component": "file_picker",
+            "description": "Select target video.",
+            "placeholder": "/mnt/videos/clip.mp4",
+            "icon": "mdi-movie-open",
+            "required": true
+        },
+        {
+            "id": "watermark_path",
+            "type": "string",
+            "label": "Watermark Image",
+            "component": "file_picker",
+            "description": "Select Logo (PNG).",
+            "icon": "mdi-watermark",
+            "required": true
+        },
+        {
+            "component": "header",
+            "label": "2. Appearance"
+        },
+        {
+            "id": "scale_percent",
+            "type": "number",
+            "label": "Scale (%)",
+            "default": 15,
+            "icon": "mdi-resize"
+        },
+        {
+            "id": "opacity",
+            "type": "number",
+            "label": "Opacity (0.1 - 1.0)",
+            "default": 0.8,
+            "icon": "mdi-ghost"
+        },
+        {
+            "id": "position",
+            "type": "select",
+            "label": "Fallback Position",
+            "default": "top_right",
+            "options": [
+                {"label": "Top Left", "value": "top_left"},
+                {"label": "Top Right", "value": "top_right"},
+                {"label": "Bottom Left", "value": "bottom_left"},
+                {"label": "Bottom Right", "value": "bottom_right"},
+                {"label": "Center", "value": "center"}
+            ],
+            "description": "Used if Drag Positioning is not used.",
+            "icon": "mdi-compass-outline"
+        },
+        {
+            "id": "output_folder",
+            "type": "string",
+            "label": "Output Folder",
+            "default": "/app/data/branded_output",
+            "component": "folder_picker",
+            "icon": "mdi-folder-download"
+        }
+    ],
+    "output_ports": [
+        {"name": "success", "display_name": "Success"},
+        {"name": "error", "display_name": "Error"}
+    ],
+    "output_schema": [
+        {
+            "name": "data.file_path",
+            "type": "string",
+            "description": "Path to the branded video."
+        }
+    ]
+}

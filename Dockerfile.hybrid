@@ -1,0 +1,56 @@
+# Stage 1: Build GUI (Biar user gak perlu install Node)
+FROM node:18-alpine as gui_builder
+WORKDIR /build
+COPY flowork-gui-lite/template/web ./
+RUN npm install && npm run build
+
+# Stage 2: Runtime Environment (Hybrid Base)
+FROM python:3.10-slim
+
+# 1. Install System Tools & Build Dependencies
+# [FIX] Gue tambahin 'build-essential' (GCC), 'cmake', dan 'portaudio19-dev' biar installernya gak cengeng.
+RUN apt-get update && apt-get install -y \
+    nginx \
+    supervisor \
+    git \
+    ffmpeg \
+    curl \
+    iputils-ping \
+    build-essential \
+    cmake \
+    python3-dev \
+    portaudio19-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Setup Folder Kerja
+WORKDIR /app
+RUN mkdir -p /app/code /app/data /app/gui_dist
+
+# 3. Setup GUI & Configs
+COPY --from=gui_builder /build/dist /app/gui_dist
+COPY nginx_gui.conf /etc/nginx/nginx.conf
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# 4. PRE-INSTALL PYTHON LIBS (Biar user hemat kuota)
+# Kita copy requirements doang, bukan codenya
+COPY flowork-core/requirements.txt /tmp/core_reqs.txt
+COPY flowork-gateway/requirements.txt /tmp/gateway_reqs.txt
+
+# Upgrade pip dulu biar aman
+RUN pip install --upgrade pip
+
+# Install dependencies berat (Torch, Llama, PyAudio sekarang pasti sukses karena udah ada GCC)
+RUN pip install --no-cache-dir -r /tmp/core_reqs.txt && \
+    pip install --no-cache-dir -r /tmp/gateway_reqs.txt && \
+    pip install --no-cache-dir supervisor
+
+# 5. Environment Variables
+ENV FLOWORK_ENV=production
+ENV DATA_DIR=/app/data
+ENV PYTHONPATH=/app/code
+
+# Port Expose
+EXPOSE 3000 8000 8001
+
+# Default Command (Jalanin Supervisor)
+CMD ["/usr/local/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

@@ -1,0 +1,13 @@
+{
+    "id": "business_canvas",
+    "name": "Business Model Canvas",
+    "version": "1.0.0",
+    "description": "Interactive whiteboard for designing business models.",
+    "author": "Flowork Dev",
+    "tier": "free",
+    "type": "widget",
+    "entry_point": "index.html",
+    "icon_file": "icon.png",
+    "default_width": 12,
+    "default_height": 8
+}

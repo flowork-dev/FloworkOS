@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <defs>
+    <filter id="glow-error">
+      <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#glow-error)" fill="none" stroke="#ff1493" stroke-width="2" stroke-linecap="round">
+    <path d="M12 2 L2 22 L22 22 Z"/>
+    <path d="M12 9 v6"/>
+    <path d="M12 18 h 0.01"/>
+  </g>
+</svg>

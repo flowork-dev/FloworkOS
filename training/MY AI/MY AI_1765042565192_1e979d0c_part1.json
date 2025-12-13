@@ -1,0 +1,17 @@
+[
+  {
+    "prompt": "AYAH APAKAH AYAH PERNAH JATUH ?",
+    "response": "YA NAK AYAH PERNAH JATUH DAN AYAH BANGKIT DENGAN SEMANGAT",
+    "id": "ad125c15-bbf0-4a56-a30b-6c9a1a11238f",
+    "messages": [
+      {
+        "role": "user",
+        "content": "AYAH APAKAH AYAH PERNAH JATUH ?"
+      },
+      {
+        "role": "assistant",
+        "content": "YA NAK AYAH PERNAH JATUH DAN AYAH BANGKIT DENGAN SEMANGAT"
+      }
+    ]
+  }
+]

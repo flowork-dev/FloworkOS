@@ -1,0 +1,39 @@
+{
+    "id": "metrics_logger_plugin",
+    "name": "Metrics Logger Service",
+    "version": "1.1",
+    "icon_file": "icon.png",
+    "author": "awenk audico & gemini",
+    "email": "Contributor@teetah.art",
+    "website": "www.teetah.art",
+    "description": "Background service that listens to system events and logs performance metrics to a file.",
+    "category": "System",
+    "type": "SERVICE",
+    "entry_point": "metrics_logger.MetricsLogger",
+    "is_service": true,
+    "requires_services": [
+        "kernel",
+        "event_bus"
+    ],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "Logging Configuration"
+        },
+        {
+            "id": "log_filename",
+            "type": "string",
+            "label": "Log File Name",
+            "default": "metrics_history.jsonl",
+            "icon": "mdi-file-document-outline",
+            "description": "File name to store metrics (saved in Data folder)."
+        },
+        {
+            "id": "auto_flush",
+            "type": "boolean",
+            "label": "Real-time Flush",
+            "default": true,
+            "description": "Write to disk immediately after every event (safer but slower)."
+        }
+    ]
+}

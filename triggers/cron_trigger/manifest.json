@@ -1,0 +1,37 @@
+{
+    "id": "cron_trigger",
+    "name": "Cron Schedule",
+    "version": "1.1",
+    "icon_file": "icon.png",
+    "author": "Flowork System",
+    "description": "Triggers the workflow at specific time intervals (e.g., every 5 minutes, daily).",
+    "type": "TRIGGER",
+    "entry_point": "processor.CronTriggerModule",
+    "tier": "free",
+    "requires_input": false,
+    "requires_services": [
+        "logger",
+        "loc"
+    ],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "Timing Configuration"
+        },
+        {
+            "id": "cron_string",
+            "type": "string",
+            "component": "cron_editor",
+            "label": "Schedule Expression",
+            "default": "*/5 * * * *",
+            "description": "Standard Cron format (Minute Hour Day Month Weekday).",
+            "required": true
+        }
+    ],
+    "output_ports": [
+        {
+            "name": "output",
+            "display_name": "Trigger"
+        }
+    ]
+}

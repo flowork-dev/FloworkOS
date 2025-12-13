@@ -1,0 +1,13 @@
+{
+    "id": "world_clock",
+    "name": "World Clock Pro",
+    "version": "1.0.0",
+    "description": "Pantau waktu dunia secara real-time. Wajib buat yang punya klien internasional!",
+    "author": "Flowork Engineer",
+    "tier": "free",
+    "type": "widget",
+    "entry_point": "index.html",
+    "icon_file": "icon.png",
+    "default_width": 12,
+    "default_height": 4
+}

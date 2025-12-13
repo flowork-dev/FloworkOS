@@ -1,0 +1,103 @@
+<template>
+  <v-container fluid class="pa-4">
+    <div class="toolbox-search mb-4">
+      <v-text-field
+        density="compact"
+        hide-details
+        rounded="lg"
+        variant="solo"
+        bg-color="rgba(255, 255, 255, 0.05)"
+        prepend-inner-icon="mdi-magnify"
+        placeholder="Search modules..."
+        clearable
+        class="ai-search-field"
+      ></v-text-field>
+    </div>
+
+    <v-list dense class="transparent-bg">
+      <v-list-subheader class="text-white text-uppercase font-weight-bold">
+        Core Modules
+      </v-list-subheader>
+      <v-list-item
+        v-for="(item, i) in coreModules"
+        :key="i"
+        class="glitch-card-item rounded-lg my-2 pa-2"
+        @click="addNode(item)"
+      >
+        <v-list-item-title class="glitch-title">{{ item.name }}</v-list-item-title>
+      </v-list-item>
+
+      <v-list-subheader class="text-white text-uppercase font-weight-bold mt-4">
+        AI & Data
+      </v-list-subheader>
+      <v-list-item
+        v-for="(item, i) in aiModules"
+        :key="i"
+        class="glitch-card-item rounded-lg my-2 pa-2"
+        @click="addNode(item)"
+      >
+        <v-list-item-title class="glitch-title">{{ item.name }}</v-list-item-title>
+      </v-list-item>
+    </v-list>
+  </v-container>
+</template>
+
+<script setup>
+import { useVueFlow } from '@vue-flow/core'
+
+// Dummy data for modules to demonstrate the design
+const coreModules = [
+  { id: 'trigger_http', name: 'HTTP Trigger' },
+  { id: 'parser_json', name: 'JSON Parser' },
+  { id: 'logger', name: 'Logger' },
+];
+
+const aiModules = [
+  { id: 'llm_openai', name: 'OpenAI GPT' },
+  { id: 'vision_model', name: 'Vision AI' },
+  { id: 'data_cleaner', name: 'Data Cleaner' },
+];
+
+// We can add the `addNode` function later if needed, but for now, this is just for demo
+const { addNodes } = useVueFlow();
+const addNode = (module) => {
+  // Logic to add a new node to the workflow canvas
+  console.log(`Adding module: ${module.name}`);
+  addNodes({
+    id: Date.now().toString(),
+    label: module.name,
+    position: { x: 250, y: 250 }
+  });
+};
+</script>
+
+<style scoped>
+/* Scoped styles for the Toolbox component */
+.transparent-bg {
+  background-color: transparent !important;
+}
+
+.glitch-card-item {
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 246, 255, 0.1);
+  transition: all 0.3s ease-in-out;
+}
+
+.glitch-card-item:hover {
+  background-color: rgba(0, 246, 255, 0.1);
+  border-color: rgba(0, 246, 255, 0.5);
+  box-shadow: 0 0 20px rgba(0, 246, 255, 0.3);
+  transform: translateY(-2px);
+  animation: glitch-effect 1.5s infinite;
+}
+
+.glitch-title {
+  color: #fff !important;
+}
+
+.ai-search-field {
+  box-shadow: 0 0 10px rgba(0, 246, 255, 0.2);
+}
+</style>

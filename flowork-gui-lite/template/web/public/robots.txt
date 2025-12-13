@@ -1,0 +1,6 @@
+# Allow all crawlers to access the site.
+User-agent: *
+Disallow:
+
+# Point to the sitemap for better indexing.
+Sitemap: https://flowork.cloud/sitemap.xml

@@ -1,0 +1,74 @@
+{
+    "id": "batch_video_splitter_c3d4",
+    "name": "Batch Video Splitter",
+    "version": "1.1",
+    "icon_file": "icon.png",
+    "author": "AWENK AUDICO & Gemini",
+    "email": "contributor@teetah.art",
+    "website": "www.teetah.art",
+    "description": "Splits all video files in a source folder into smaller segments of a specified duration.",
+    "type": "ACTION",
+    "entry_point": "processor.BatchVideoSplitterModule",
+    "tier": "free",
+    "behaviors": [
+        "retry",
+        "loop"
+    ],
+    "requires_services": [
+        "logger",
+        "loc",
+        "kernel"
+    ],
+    "properties": [],
+    "ui_schema": [
+        {
+            "id": "segment_duration",
+            "type": "integer",
+            "label": "Segment Duration (Seconds)",
+            "default": 10,
+            "icon": "mdi-clock-time-four-outline",
+            "description": "Duration of each video segment in seconds",
+            "required": true
+        },
+        {
+            "id": "folder_pairs",
+            "type": "list",
+            "component": "FolderPairList",
+            "label": "Processing Queues",
+            "icon": "mdi-folder-arrow-left-right",
+            "description": "Source and Destination folder pairs",
+            "required": true
+        },
+        {
+            "id": "process_timeout",
+            "type": "integer",
+            "label": "Timeout (Seconds)",
+            "default": 600,
+            "icon": "mdi-timer-off-outline",
+            "description": "Max processing time per file",
+            "advanced": true
+        }
+    ],
+    "output_ports": [
+        {
+            "name": "success",
+            "display_name": "Success"
+        },
+        {
+            "name": "error",
+            "display_name": "Error"
+        }
+    ],
+    "output_schema": [
+        {
+            "name": "data.batch_results",
+            "type": "list",
+            "description": "A list of result objects for each processed folder pair."
+        },
+        {
+            "name": "data.total_files_processed",
+            "type": "integer",
+            "description": "The total number of original video files processed across all folders."
+        }
+    ]
+}

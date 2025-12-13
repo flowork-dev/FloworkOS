@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "include": [
+    "/api/v1/*",
+    "/sitemap.xml",
+    "/functions/api/v1/cron/trigger"
+  ],
+  "exclude": [
+    "/assets/*",
+    "/images/*",
+    "/favicon.svg"
+  ]
+}

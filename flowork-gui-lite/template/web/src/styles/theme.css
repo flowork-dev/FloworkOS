@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&family=Orbitron:wght@400..900&family=Fira+Code:wght@300..700&display=swap');
+
+:root {
+  font-family: 'Exo 2', sans-serif;
+
+  --neon-cyan: #00f5ff;
+  --neon-purple: #bf00ff;
+  --neon-orange: #ff9800;
+  --neon-green: #39ff14;
+  --neon-red: #ff5252;
+
+  --text-primary: #E0E0E0;
+  --text-secondary: #B0BEC5;
+
+  --bg-dark: #0A0F1E;
+  --bg-panel: #161625;
+  --bg-panel-glass-light: rgba(23, 33, 65, 0.2);
+  --bg-panel-glass: rgba(23, 33, 65, 0.7);
+  --bg-input: #2a2a4a;
+
+  --border-glow-soft: rgba(0, 245, 255, 0.2);
+  --border-glow-medium: rgba(0, 245, 255, 0.5);
+  --border-glow-hard: #00f5ff;
+  --border-glow-purple-soft: rgba(191, 0, 255, 0.2);
+
+  --glass-bg: rgba(26, 26, 46, 0.7);
+  --glass-border: rgba(0, 245, 255, 0.2);
+}

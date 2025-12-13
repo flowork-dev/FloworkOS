@@ -1,0 +1,135 @@
+{
+    "id": "stable_diffusion_xl_module",
+    "name": "Stable Diffusion XL Generator",
+    "version": "1.2",
+    "icon_file": "icon.png",
+    "author": "AWENK AUDICO",
+    "email": "contributor@teetah.art",
+    "website": "www.teetah.art",
+    "description": "Generates high-quality images using local Stable Diffusion XL models. Supports custom models and fine-tuning parameters.",
+    "category": "AI Generation",
+    "type": "ACTION",
+    "entry_point": "processor.StableDiffusionXLModule",
+    "tier": "pro",
+    "behaviors": [
+        "retry"
+    ],
+    "requires_services": [
+        "logger",
+        "loc",
+        "kernel",
+        "ai_provider_manager_service"
+    ],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "1. Model Configuration"
+        },
+        {
+            "id": "model_folder",
+            "type": "string",
+            "label": "AI Model Folder Name",
+            "default": "stable-diffusion-xl-base-1.0",
+            "icon": "mdi-brain",
+            "description": "Exact folder name inside 'ai_models/image'. Example: 'stable-diffusion-xl-base-1.0'."
+        },
+        {
+            "component": "header",
+            "label": "2. Prompting"
+        },
+        {
+            "id": "prompt",
+            "type": "textarea",
+            "label": "Positive Prompt",
+            "default": "a cinematic photo of a raccoon astronaut, professional photography, 8k, detailed texture",
+            "placeholder": "Describe what you want to see...",
+            "icon": "mdi-image-filter-hdr",
+            "required": true
+        },
+        {
+            "id": "negative_prompt",
+            "type": "textarea",
+            "label": "Negative Prompt",
+            "default": "blurry, worst quality, low quality, cartoon, anime, deformed, ugly",
+            "placeholder": "Describe what to avoid...",
+            "icon": "mdi-image-off-outline"
+        },
+        {
+            "component": "header",
+            "label": "3. Output Settings"
+        },
+        {
+            "id": "output_folder",
+            "type": "string",
+            "component": "folder_picker",
+            "label": "Output Destination",
+            "icon": "mdi-folder-image",
+            "description": "Where to save the generated images."
+        },
+        {
+            "id": "output_filename_prefix",
+            "type": "string",
+            "label": "Filename Prefix",
+            "default": "sdxl_gen",
+            "icon": "mdi-tag-text-outline"
+        },
+        {
+            "component": "header",
+            "label": "4. Advanced Parameters"
+        },
+        {
+            "id": "width",
+            "type": "integer",
+            "label": "Width (px)",
+            "default": 1024,
+            "min": 512,
+            "max": 2048,
+            "step": 8
+        },
+        {
+            "id": "height",
+            "type": "integer",
+            "label": "Height (px)",
+            "default": 1024,
+            "min": 512,
+            "max": 2048,
+            "step": 8
+        },
+        {
+            "id": "num_inference_steps",
+            "type": "integer",
+            "label": "Inference Steps",
+            "default": 30,
+            "min": 10,
+            "max": 100,
+            "description": "Higher values = better quality but slower."
+        },
+        {
+            "id": "guidance_scale",
+            "type": "number",
+            "label": "Guidance Scale (CFG)",
+            "default": 7.5,
+            "min": 1.0,
+            "max": 20.0,
+            "step": 0.5,
+            "description": "How closely the image follows the prompt."
+        }
+    ],
+    "output_ports": [
+        {
+            "name": "success",
+            "display_name": "Success"
+        },
+        {
+            "name": "error",
+            "display_name": "Error"
+        }
+    ],
+    "output_schema": [
+        {
+            "name": "data.image_path",
+            "type": "string",
+            "description": "The full local path to the generated image file."
+        }
+    ]
+}

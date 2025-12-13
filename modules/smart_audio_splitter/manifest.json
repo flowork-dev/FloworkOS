@@ -1,0 +1,64 @@
+{
+    "id": "smart_audio_splitter",
+    "name": "Smart Audio Splitter (Batch v4.6)",
+    "version": "4.6",
+    "icon_file": "icon.png",
+    "author": "Flowork & Gemini",
+    "description": "Split audio using v4.0 Logic (1s Silence, -45dB). Folder Batch Mode.",
+    "type": "ACTION",
+    "entry_point": "processor.SmartAudioSplitter",
+    "tier": "free",
+    "behaviors": ["retry"],
+    "requires_services": ["logger", "kernel"],
+    "properties": [],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "1. Processing Queues"
+        },
+        {
+            "id": "folder_pairs",
+            "type": "list",
+            "component": "FolderPairList",
+            "label": "Folder Pairs",
+            "description": "Left: Source Folder | Right: Output Folder",
+            "icon": "mdi-folder-music-outline",
+            "required": true,
+            "ui:options": {
+                "leftLabel": "Source Folder",
+                "rightLabel": "Output Folder"
+            }
+        },
+        {
+            "component": "header",
+            "label": "2. Silence Sensitivity (v4.0 Logic)"
+        },
+        {
+            "id": "min_silence_len",
+            "type": "integer",
+            "label": "Min. Silence Duration (ms)",
+            "description": "Default: 1000ms (1 Second). Proven stable.",
+            "default": 1000,
+            "icon": "mdi-timer-sand",
+            "min": 100,
+            "max": 5000
+        },
+        {
+            "id": "silence_thresh",
+            "type": "integer",
+            "label": "Silence Threshold (dB)",
+            "description": "Default: -45dB. Proven stable.",
+            "default": -45,
+            "icon": "mdi-volume-off",
+            "min": -60,
+            "max": -10
+        }
+    ],
+    "output_ports": [
+        { "name": "success", "display_name": "Success" },
+        { "name": "error", "display_name": "Error" }
+    ],
+    "output_schema": [
+        { "name": "data.total_files_created", "type": "integer" }
+    ]
+}

@@ -1,0 +1,13 @@
+{
+    "id": "VIDEO_WATERMAK",
+    "name": "VIDEO WATERMAK",
+    "version": "1.0.0",
+    "description": "Tactical UI for Media Watermarking Operations.",
+    "author": "Flowork Cyber Division",
+    "tier": "builder",
+    "type": "widget",
+    "entry_point": "index.html",
+    "icon_file": "icon.png",
+    "default_width": 6,
+    "default_height": 8
+}

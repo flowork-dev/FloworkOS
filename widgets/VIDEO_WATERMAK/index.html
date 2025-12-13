@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIDEO WATERMAK</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg-core: #0a0a10; --neon-blue: #00f3ff; --neon-pink: #ff0055; --neon-green: #00ffcc; --glass: rgba(255, 255, 255, 0.05); --surface: #111119; }
+        * { box-sizing: border-box; user-select: none; outline: none; }
+        body { margin: 0; padding: 20px; background: var(--bg-core); color: #fff; font-family: 'Rajdhani', sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; background-image: radial-gradient(circle at 50% 50%, rgba(0, 243, 255, 0.03) 0%, transparent 70%); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid var(--neon-blue); padding-bottom: 10px; }
+        .title { font-size: 1.5rem; font-weight: 700; letter-spacing: 2px; color: var(--neon-blue); text-shadow: 0 0 10px rgba(0, 243, 255, 0.5); }
+        .status { font-family: 'JetBrains Mono'; font-size: 0.7rem; color: #555; }
+        .preview-container { flex: 1; position: relative; background: #000; border: 1px solid #333; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        video { max-width: 100%; max-height: 100%; object-fit: contain; display: none; }
+        .placeholder-text { position: absolute; color: #333; font-size: 1.2rem; font-weight: bold; text-align: center; pointer-events: none; z-index: 0; }
+        #drag-logo { position: absolute; width: 15%; z-index: 100; cursor: grab; filter: drop-shadow(0 0 5px rgba(0,0,0,0.5)); background: rgba(0, 243, 255, 0.2); border: 1px dashed var(--neon-blue); display: flex; align-items: center; justify-content: center; color: var(--neon-blue); font-size: 0.8rem; }
+        #drag-logo:active { cursor: grabbing; border-color: #fff; }
+        #drag-logo img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+        .control-deck { margin-top: 15px; padding: 15px; background: var(--surface); border: 1px solid rgba(0, 243, 255, 0.1); border-radius: 8px; }
+        .row { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-end; }
+        .col { flex: 1; }
+        .btn-file { background: rgba(0, 255, 204, 0.1); border: 1px solid var(--neon-green); color: var(--neon-green); padding: 8px 15px; cursor: pointer; font-family: 'Rajdhani'; font-weight: bold; width: 100%; transition: 0.2s; text-align: center; display: block; }
+        .btn-file:hover { background: var(--neon-green); color: #000; }
+        .label { font-family: 'JetBrains Mono'; font-size: 0.7rem; color: #888; display: block; margin-bottom: 3px; }
+        .input-group { display: flex; gap: 5px; }
+        .cyber-input { width: 100%; background: #000; border: 1px solid #444; color: var(--neon-blue); padding: 5px 10px; font-family: 'JetBrains Mono'; font-size: 0.8rem; }
+        .btn-mini-browse { background: #222; border: 1px solid #444; color: var(--neon-blue); cursor: pointer; padding: 0 15px; white-space: nowrap; font-weight: bold; font-family: 'Rajdhani'; }
+        .btn-mini-browse:hover { background: var(--neon-blue); color: #000; }
+        input[type=range] { width: 100%; accent-color: var(--neon-blue); cursor: pointer; height: 5px; }
+        .btn-seal { margin-top: 10px; width: 100%; padding: 12px; background: linear-gradient(90deg, transparent, rgba(0, 243, 255, 0.1), transparent); border: 1px solid var(--neon-blue); color: var(--neon-blue); font-family: 'Rajdhani'; font-weight: 700; font-size: 1.1rem; letter-spacing: 2px; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
+        .btn-seal:hover { background: var(--neon-blue); color: #000; box-shadow: 0 0 20px var(--neon-blue); }
+        .btn-seal:disabled { border-color: #333; color: #555; cursor: not-allowed; background: none; }
+        input[type="file"] { display: none; }
+        .log-line { font-family: 'JetBrains Mono'; font-size: 0.7rem; color: #666; margin-top: 5px; text-align: right; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .browser-window { width: 600px; height: 500px; background: var(--surface); border: 1px solid var(--neon-blue); box-shadow: 0 0 30px rgba(0,243,255,0.1); display: flex; flex-direction: column; animation: popIn 0.2s ease-out; }
+        @keyframes popIn { from{transform:scale(0.9); opacity:0;} to{transform:scale(1); opacity:1;} }
+        .browser-header { padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; background: rgba(0, 243, 255, 0.05); }
+        .path-display { font-family: 'JetBrains Mono'; font-size: 0.9rem; color: var(--neon-blue); }
+        .browser-body { flex: 1; overflow-y: auto; padding: 10px; }
+        .file-item { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 0.9rem; transition:0.2s; }
+        .file-item:hover { background: rgba(0, 243, 255, 0.1); padding-left: 15px; }
+        .file-icon { width: 20px; text-align: center; }
+        .close-btn { background: none; border: none; color: #555; cursor: pointer; font-size: 1.2rem; }
+        .browser-footer { padding: 12px; border-top: 1px solid #333; display: flex; justify-content: flex-end; background: #050505; }
+        .btn-select-dir { background: var(--neon-green); color: #000; border: none; padding: 8px 15px; font-family: 'Rajdhani'; font-weight: bold; cursor: pointer; }
+        .btn-select-dir:hover { box-shadow: 0 0 15px var(--neon-green); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="title">VIDEO WATERMAK <span style="color:#fff; font-size:0.6em">// LIVE CINEMA</span></div>
+        <div class="status" id="connStatus">DISCONNECTED</div>
+    </div>
+
+    <div class="preview-container" id="canvas">
+        <div class="placeholder-text" id="placeholder">DROP VIDEO HERE</div>
+        <video id="mainVideo" controls loop></video>
+        <div id="drag-logo"><span id="logo-text">LOGO</span><img id="logo-img" style="display:none"></div>
+    </div>
+
+    <div class="control-deck">
+
+        <div class="row">
+            <div class="col">
+                <span class="label">1. SOURCE VIDEO</span>
+                <button class="btn-file" onclick="document.getElementById('vidInput').click()">🎬 OPEN VIDEO</button>
+                <input type="text" id="serverVideoPath" class="cyber-input" placeholder="/app/data/..." style="margin-top:5px; border-top:none;">
+            </div>
+            <div class="col">
+                <span class="label">2. WATERMARK</span>
+                <button class="btn-file" style="border-color:var(--neon-pink); color:var(--neon-pink)" onclick="document.getElementById('imgInput').click()">🖼️ OPEN LOGO</button>
+                <input type="text" id="serverImgPath" class="cyber-input" placeholder="/app/data/..." style="margin-top:5px; border-top:none;">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <span class="label">3. OUTPUT FOLDER (SERVER)</span>
+                <div class="input-group">
+                    <input type="text" id="outputPath" class="cyber-input" value="/app/data/branded_output">
+                    <button class="btn-mini-browse" onclick="openFolderBrowser()">📂 BROWSE FOLDER</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <span class="label">SCALE: <span id="lbl-scale" style="color:#fff">15%</span></span>
+                <input type="range" id="rng-scale" min="5" max="50" value="15" oninput="updateUI()">
+            </div>
+            <div class="col">
+                <span class="label">OPACITY: <span id="lbl-opa" style="color:#fff">80%</span></span>
+                <input type="range" id="rng-opa" min="10" max="100" value="80" oninput="updateUI()">
+            </div>
+        </div>
+
+        <button class="btn-seal" id="btnRun" onclick="executeSeal()">INITIALIZE STAMP</button>
+        <div class="log-line" id="logs">System Ready.</div>
+    </div>
+
+    <input type="file" id="vidInput" accept="video/*">
+    <input type="file" id="imgInput" accept="image/*">
+
+    <div class="modal-overlay" id="fileBrowser">
+        <div class="browser-window">
+            <div class="browser-header">
+                <span class="path-display" id="currentPath">/app/data</span>
+                <button class="close-btn" onclick="closeBrowser()">✖</button>
+            </div>
+            <div class="browser-body" id="fileList"></div>
+            <div class="browser-footer">
+                <button class="btn-select-dir" onclick="selectCurrentFolder()">✅ SELECT CURRENT FOLDER</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // AUTH
+        const urlParams = new URLSearchParams(window.location.search);
+        let AUTH_TOKEN = urlParams.get('auth_token') || localStorage.getItem('flowork_auth_token');
+        let GATEWAY_URL = urlParams.get('gateway_url') || localStorage.getItem('flowork_engine_url');
+        if (GATEWAY_URL && GATEWAY_URL.endsWith('/')) GATEWAY_URL = GATEWAY_URL.slice(0, -1);
+
+        if (AUTH_TOKEN) {
+            document.getElementById('connStatus').innerText = "CONNECTED";
+            document.getElementById('connStatus').style.color = "var(--neon-green)";
+        }
+
+        const video = document.getElementById('mainVideo');
+        const dragItem = document.getElementById('drag-logo');
+        const container = document.getElementById('canvas');
+        const vidInput = document.getElementById('vidInput');
+        const imgInput = document.getElementById('imgInput');
+        const placeholder = document.getElementById('placeholder');
+
+        let finalRatioX = 0.8;
+        let finalRatioY = 0.1;
+
+        // --- 1. LOCAL PREVIEW ---
+        vidInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            video.src = url; video.style.display = 'block'; placeholder.style.display = 'none'; video.play();
+            document.getElementById('serverVideoPath').value = `/app/data/${file.name}`;
+            log(`Preview: ${file.name}`);
+        };
+
+        imgInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            const imgEl = document.getElementById('logo-img');
+            imgEl.src = url; imgEl.style.display = 'block';
+            document.getElementById('logo-text').style.display = 'none';
+            dragItem.style.border = 'none'; dragItem.style.background = 'transparent';
+            document.getElementById('serverImgPath').value = `/app/data/${file.name}`;
+            log(`Logo: ${file.name}`);
+        };
+
+        // --- 2. FOLDER BROWSER ---
+        let currentPath = "/app/data";
+
+        function openFolderBrowser() {
+            document.getElementById('fileBrowser').style.display = 'flex';
+            fetchFiles(currentPath);
+        }
+
+        function closeBrowser() { document.getElementById('fileBrowser').style.display = 'none'; }
+
+        function selectCurrentFolder() {
+            document.getElementById('outputPath').value = currentPath;
+            closeBrowser();
+            log(`Output Folder: ${currentPath}`);
+        }
+
+        async function fetchFiles(path) {
+            document.getElementById('currentPath').innerText = path;
+            const listEl = document.getElementById('fileList');
+            listEl.innerHTML = '<div style="padding:20px; text-align:center; color:#555;">Connecting...</div>';
+
+            try {
+                let endpoint = GATEWAY_URL.endsWith('/proxy') ? GATEWAY_URL : GATEWAY_URL + '/proxy';
+                if (!GATEWAY_URL.includes('api/v1')) endpoint = `${GATEWAY_URL}/api/v1`;
+
+                const url = `${endpoint}/filesystem/list?path=${encodeURIComponent(path)}`;
+                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` } });
+
+                if (!res.ok) throw new Error("API Error");
+                const data = await res.json();
+                renderBrowser(data.items || []);
+            } catch (e) {
+                renderBrowser([
+                    {name:"data",type:"directory"},
+                    {name:"branded_output",type:"directory"},
+                    {name:"videos",type:"directory"}
+                ], true);
+            }
+        }
+
+        function renderBrowser(items, isMock=false) {
+            const list = document.getElementById('fileList'); list.innerHTML = "";
+            if (isMock) list.innerHTML = `<div style="text-align:center; color:#ff8800; padding:5px; font-size:0.7rem;">⚠️ OFFLINE MODE</div>`;
+
+            if (currentPath !== '/' && currentPath !== '/app') {
+                let d = document.createElement('div'); d.className = 'file-item';
+                d.innerHTML = '<span style="color:var(--neon-blue)">⬆️</span> .. (Up)';
+                d.onclick = () => {
+                    let p = currentPath.split('/'); p.pop();
+                    currentPath = p.join('/') || '/'; fetchFiles(currentPath, isMock);
+                };
+                list.appendChild(d);
+            }
+
+            items = items.filter(i => i.type === 'directory');
+            items.sort((a,b) => a.name.localeCompare(b.name));
+
+            items.forEach(i => {
+                let d = document.createElement('div'); d.className = 'file-item';
+                d.innerHTML = `📁 ${i.name}`;
+                d.onclick = () => {
+                    currentPath = (currentPath.endsWith('/') ? currentPath : currentPath + '/') + i.name;
+                    fetchFiles(currentPath, isMock);
+                };
+                list.appendChild(d);
+            });
+        }
+
+        // --- 3. DRAG LOGIC ---
+        let isDragging = false;
+        dragItem.addEventListener('mousedown', () => isDragging = true);
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const rect = container.getBoundingClientRect();
+            let x = e.clientX - rect.left - (dragItem.offsetWidth / 2);
+            let y = e.clientY - rect.top - (dragItem.offsetHeight / 2);
+            x = Math.max(0, Math.min(x, rect.width - dragItem.offsetWidth));
+            y = Math.max(0, Math.min(y, rect.height - dragItem.offsetHeight));
+            dragItem.style.left = x + 'px'; dragItem.style.top = y + 'px';
+            finalRatioX = x / rect.width; finalRatioY = y / rect.height;
+        });
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        function updateUI() {
+            const scale = document.getElementById('rng-scale').value;
+            const opacity = document.getElementById('rng-opa').value;
+            document.getElementById('lbl-scale').innerText = scale + "%";
+            document.getElementById('lbl-opa').innerText = opacity + "%";
+            dragItem.style.width = scale + "%"; dragItem.style.opacity = opacity / 100;
+        }
+
+        function log(msg) { document.getElementById('logs').innerText = "> " + msg; }
+
+        // --- 4. EXECUTE (THE FIX) ---
+        async function executeSeal() {
+            const serverVid = document.getElementById('serverVideoPath').value.trim();
+            const serverImg = document.getElementById('serverImgPath').value.trim();
+            const outPath = document.getElementById('outputPath').value.trim();
+
+            if (!serverVid || !serverImg) { log("ERROR: Missing Paths!"); return; }
+
+            const btn = document.getElementById('btnRun');
+            btn.disabled = true; btn.innerText = "PROCESSING...";
+            log("Sending Command...");
+
+            try {
+                let endpoint = GATEWAY_URL;
+                if (!endpoint.includes('/proxy')) endpoint += '/proxy';
+
+                // [FIX] PACK DATA KE SEMUA SLOT (Inputs, Params, Config) biar Kernel gak bingung
+                const inputsData = {
+                    input_path: serverVid,
+                    watermark_path: serverImg,
+                    x_ratio: finalRatioX,
+                    y_ratio: finalRatioY,
+                    opacity: document.getElementById('rng-opa').value / 100,
+                    scale_percent: parseInt(document.getElementById('rng-scale').value),
+                    output_folder: outPath
+                };
+
+                const payload = {
+                    module_id: "media_watermarker_v1",
+                    action: "execute",
+                    inputs: inputsData,
+                    params: inputsData, // Jaga-jaga
+                    config: inputsData  // Jaga-jaga
+                };
+
+                const res = await fetch(`${endpoint}/execution/run_module`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Gateway-Secret': AUTH_TOKEN },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) throw new Error("Server Error");
+                log("✅ Success! Processing in Background...");
+
+            } catch (e) {
+                log("Failed: " + e.message);
+            } finally {
+                setTimeout(() => { btn.disabled = false; btn.innerText = "INITIALIZE STAMP"; }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>

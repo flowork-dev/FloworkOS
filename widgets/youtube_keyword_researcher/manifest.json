@@ -1,0 +1,13 @@
+{
+    "id": "youtube_keyword_researcher",
+    "name": "YOUTUBE KEYWORDS RESEARCHER",
+    "version": "2.0.0",
+    "description": "Interface Dashboard for YouTube Researcher Module.",
+    "author": "Flowork Cyber Division",
+    "tier": "architect",
+    "type": "widget",
+    "entry_point": "index.html",
+    "icon_file": "icon.png",
+    "default_width": 8,
+    "default_height": 8
+}

@@ -1,0 +1,204 @@
+{
+    "id": "golden_moment_clipper_v1",
+    "name": "Golden Moment Clipper",
+    "version": "2.6.0",
+    "icon_file": "icon.png",
+    "author": "Flowork User",
+    "description": "Smart Clipper: Batch Processing Folder, AI Face/Mouse Tracking, & Karaoke Subs.",
+    "category": "Video Processing",
+    "type": "ACTION",
+    "entry_point": "processor.GoldenMomentClipper",
+    "tier": "architect",
+    "behaviors": ["retry"],
+    "requires_services": ["logger", "kernel"],
+    "properties": [],
+    "ui_schema": [
+        {
+            "component": "header",
+            "label": "1. Source Media (Batch)"
+        },
+        {
+            "id": "input_folder_path",
+            "type": "string",
+            "label": "Input Source Folder",
+            "component": "folder_picker",
+            "description": "Select a folder containing video files. ALL videos will be processed.",
+            "icon": "mdi-folder-multiple-image",
+            "required": true
+        },
+        {
+            "id": "timestamps",
+            "type": "textarea",
+            "label": "Timestamps (MM:SS-MM:SS)",
+            "default": "",
+            "placeholder": "00:10-00:30\n01:15-01:45",
+            "description": "Applied to ALL videos found. Format: StartTime-EndTime.",
+            "icon": "mdi-clipboard-text-clock",
+            "required": true
+        },
+        {
+            "component": "header",
+            "label": "2. AI Strategy & Model"
+        },
+        {
+            "id": "whisper_model",
+            "type": "select",
+            "label": "AI Model Size",
+            "default": "small",
+            "component": "select",
+            "icon": "mdi-robot-confused",
+            "options": [
+                {"label": "Tiny (Fastest, Low Accuracy)", "value": "tiny"},
+                {"label": "Base (Balanced)", "value": "base"},
+                {"label": "Small (Recommended)", "value": "small"},
+                {"label": "Medium (Slow, High Accuracy)", "value": "medium"},
+                {"label": "Large (Very Slow, Best Accuracy)", "value": "large-v2"}
+            ],
+            "description": "Select the AI model size for transcription and smart cutting."
+        },
+        {
+            "id": "smart_cut_mode",
+            "type": "toggle",
+            "label": "Enable Smart Cut (Dot Hunter)",
+            "default": true,
+            "icon": "mdi-target-variant",
+            "description": "If ON, cut ONLY at the nearest period (.) or sentence end. Requires valid AI Model."
+        },
+        {
+            "component": "header",
+            "label": "3. Editing Layout"
+        },
+        {
+            "id": "resize_mode",
+            "type": "select",
+            "label": "Layout / Tracking Mode",
+            "default": "podcast_split",
+            "component": "select",
+            "icon": "mdi-aspect-ratio",
+            "options": [
+                {"label": "Podcast Split (Left Edge Top - Right Edge Bottom)", "value": "podcast_split"},
+                {"label": "Face Jump (AI: Focus Speaker every 3s)", "value": "face_jump"},
+                {"label": "Mouse Follow (AI: Smooth Tutorial Mode)", "value": "mouse_smooth"},
+                {"label": "Smart Crop (Static Center)", "value": "crop"},
+                {"label": "Fit to Screen (Original Ratio)", "value": "fit"}
+            ],
+            "description": "Select 'Face Jump' for talking heads or 'Mouse Follow' for tutorials."
+        },
+        {
+            "id": "remove_silence",
+            "type": "toggle",
+            "label": "Remove Silence (Jump Cut)",
+            "default": false,
+            "icon": "mdi-waveform",
+            "description": "Automatically remove silent parts to make video faster/engaging."
+        },
+        {
+            "id": "silence_threshold",
+            "type": "integer",
+            "label": "Silence Sensitivity (dB)",
+            "default": 30,
+            "min": 10,
+            "max": 60,
+            "icon": "mdi-volume-off",
+            "description": "Higher = More aggressive (cuts quiet sounds). Default 30 (-30dB)."
+        },
+        {
+            "id": "safety_margin",
+            "type": "integer",
+            "label": "Safety Cut Margin (px)",
+            "default": 100,
+            "min": 0,
+            "max": 100,
+            "icon": "mdi-crop-square",
+            "description": "Pixels to cut from all sides before processing (to remove black bars/noise)."
+        },
+        {
+            "component": "header",
+            "label": "4. Overlays (Watermark & Subs)"
+        },
+        {
+            "id": "add_subtitles",
+            "type": "toggle",
+            "label": "Generate Karaoke Subtitles",
+            "default": true,
+            "icon": "mdi-subtitles",
+            "description": "Uses the ORIGINAL High-Contrast Yellow style."
+        },
+        {
+            "id": "subtitle_size",
+            "type": "integer",
+            "label": "Subtitle Font Size",
+            "default": 65,
+            "icon": "mdi-format-size",
+            "description": "Default is 65 (Big & Clear)."
+        },
+        {
+            "id": "watermark_text",
+            "type": "text",
+            "label": "Watermark Text",
+            "default": "MADE WITH FLOWORK",
+            "placeholder": "Your Channel Name",
+            "icon": "mdi-watermark",
+            "description": "Dynamic floating watermark text."
+        },
+        {
+            "id": "watermark_size",
+            "type": "integer",
+            "label": "Watermark Font Size",
+            "default": 45,
+            "icon": "mdi-format-size"
+        },
+        {
+            "component": "header",
+            "label": "5. Branding & Outro"
+        },
+        {
+            "id": "enable_outro",
+            "type": "toggle",
+            "label": "Enable Closing Video?",
+            "default": false,
+            "icon": "mdi-movie-open-check",
+            "description": "Toggle this to attach an outro video."
+        },
+        {
+            "id": "closing_video_path",
+            "type": "string",
+            "label": "Closing / Outro Video",
+            "component": "file_picker",
+            "description": "This video will be appended based on Merge Settings.",
+            "icon": "mdi-movie-open-star"
+        },
+        {
+            "component": "header",
+            "label": "6. Output"
+        },
+        {
+            "id": "merge_clips",
+            "type": "toggle",
+            "label": "Merge All Clips?",
+            "default": true,
+            "icon": "mdi-set-merge",
+            "description": "ON = Single long video (Outro at very end). OFF = Separate files (Outro on each)."
+        },
+        {
+            "id": "output_folder",
+            "type": "string",
+            "label": "Output Folder",
+            "component": "folder_picker",
+            "description": "Where to save the result.",
+            "icon": "mdi-folder-download",
+            "required": true
+        }
+    ],
+    "output_ports": [
+        {"name": "success", "display_name": "Success"},
+        {"name": "error", "display_name": "Error"}
+    ],
+    "output_schema": [
+        {
+            "name": "data.output_path",
+            "type": "string",
+            "description": "Path to the final video."
+        }
+    ]
+}

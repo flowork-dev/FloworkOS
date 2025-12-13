@@ -1,0 +1,13 @@
+{
+    "id": "winamp_cyber",
+    "name": "Winamp 2077",
+    "version": "2.9.1",
+    "description": "Retro-futuristic audio player with shuffle & visualizer.",
+    "author": "Flowork Cyber Division",
+    "tier": "free",
+    "type": "widget",
+    "entry_point": "index.html",
+    "icon_file": "icon.png",
+    "default_width": 6,
+    "default_height": 8
+}

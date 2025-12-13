@@ -1,0 +1,173 @@
+{
+    "id": "dynamic_media_stitcher_b1c2",
+    "name": "Dynamic Media Stitcher",
+    "version": "7.3",
+    "icon_file": "icon.png",
+    "author": "AWENK AUDICO & Gemini",
+    "email": "contributor@teetah.art",
+    "website": "www.teetah.art",
+    "description": "Intelligently stitches video and audio from selected FOLDERS. Matches duration. Includes AI subtitles.",
+    "type": "ACTION",
+    "entry_point": "processor.DynamicMediaStitcherModule",
+    "tier": "architect",
+    "behaviors": ["retry"],
+    "requires_services": ["logger", "loc", "kernel"],
+    "properties": [],
+    "ui_schema": [
+        {
+            "id": "job_list",
+            "type": "list",
+            "label": "Stitching Queue (Folder Config)",
+            "description": "Add jobs. Each job requires a Video Folder, Audio Folder, and Output Folder.",
+            "icon": "mdi-folder-multiple",
+            "default": [],
+            "schema": [
+                {
+                    "id": "video_folder",
+                    "type": "string",
+                    "label": "📁 Video Source Folder",
+                    "component": "folder_picker",
+                    "description": "Folder containing video clips (.mp4, .mov, etc)"
+                },
+                {
+                    "id": "audio_folder",
+                    "type": "string",
+                    "label": "🎵 Audio Source Folder",
+                    "component": "folder_picker",
+                    "description": "Folder containing audio tracks (.mp3, .wav)"
+                },
+                {
+                    "id": "output_folder",
+                    "type": "string",
+                    "label": "💾 Output Destination",
+                    "component": "folder_picker",
+                    "description": "Where to save the final result"
+                }
+            ]
+        },
+        {
+            "component": "header",
+            "label": "Advanced Settings"
+        },
+        {
+            "id": "duration_reference",
+            "type": "select",
+            "label": "Duration Reference (Master)",
+            "options": ["audio", "video"],
+            "default": "audio",
+            "icon": "mdi-timer-sand"
+        },
+        {
+            "id": "original_audio_mode",
+            "type": "select",
+            "label": "Original Video Audio Mode",
+            "options": ["replace", "merge"],
+            "default": "replace",
+            "icon": "mdi-volume-source"
+        },
+        {
+            "id": "original_audio_volume",
+            "type": "integer",
+            "label": "Original Audio Volume (%)",
+            "default": 20,
+            "min": 0,
+            "max": 100,
+            "icon": "mdi-volume-high"
+        },
+        {
+            "id": "add_subtitles",
+            "type": "toggle",
+            "label": "Generate AI Subtitles",
+            "default": true,
+            "icon": "mdi-subtitles"
+        },
+        {
+            "id": "correction_dictionary",
+            "type": "textarea",
+            "label": "Subtitle Correction Dictionary",
+            "description": "Format: 'wrong: correct' (one per line)",
+            "default": "flowwork: Flowork\nflo work: Flowork\nteeta: Teetah",
+            "icon": "mdi-spellcheck"
+        },
+        {
+            "id": "subtitle_model_size",
+            "type": "select",
+            "label": "Whisper Model Size",
+            "options": ["tiny", "base", "small", "medium", "large-v3"],
+            "default": "base",
+            "icon": "mdi-brain"
+        },
+        {
+            "id": "subtitle_effect_style",
+            "type": "select",
+            "label": "Subtitle Animation Style",
+            "options": ["Karaoke", "Word Reveal"],
+            "default": "Karaoke",
+            "icon": "mdi-animation"
+        },
+        {
+            "id": "subtitle_font",
+            "type": "select",
+            "label": "Subtitle Font",
+            "options": ["Arial", "Verdana", "Tahoma", "Times New Roman"],
+            "default": "Arial",
+            "icon": "mdi-format-font"
+        },
+        {
+            "id": "subtitle_font_size",
+            "type": "integer",
+            "label": "Subtitle Font Size",
+            "default": 32,
+            "icon": "mdi-format-size"
+        },
+        {
+            "id": "subtitle_primary_color",
+            "type": "text",
+            "label": "Primary Text Color (Hex)",
+            "default": "#FFFFFF",
+            "description": "e.g. #FFFFFF",
+            "icon": "mdi-format-color-text"
+        },
+        {
+            "id": "subtitle_secondary_color",
+            "type": "text",
+            "label": "Highlight/Secondary Color (Hex)",
+            "default": "#FFFF00",
+            "description": "e.g. #FFFF00",
+            "icon": "mdi-format-color-highlight"
+        },
+        {
+            "id": "subtitle_style",
+            "type": "select",
+            "label": "Subtitle Border Style",
+            "options": ["Default", "Outline", "Shadow"],
+            "default": "Outline",
+            "icon": "mdi-border-style"
+        },
+        {
+            "id": "process_timeout",
+            "type": "integer",
+            "label": "Process Timeout (Seconds)",
+            "default": 1200,
+            "description": "Max processing time allowed.",
+            "icon": "mdi-clock-alert",
+            "advanced": true
+        }
+    ],
+    "output_ports": [
+        {"name": "success", "display_name": "Success"},
+        {"name": "error", "display_name": "Error"}
+    ],
+    "output_schema": [
+        {
+            "name": "data.stitcher_results",
+            "type": "list",
+            "description": "Result list of processed videos."
+        },
+        {
+            "name": "data.total_videos_created",
+            "type": "integer",
+            "description": "Total count of created videos."
+        }
+    ]
+}
