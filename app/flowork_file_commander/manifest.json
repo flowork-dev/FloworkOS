@@ -1,0 +1,38 @@
+{
+    "id": "flowork_file_commander",
+    "name": "File Commander",
+    "version": "3.0.0",
+    "description": "Secure file management utility powered by Muscle.",
+    "category": "apps",
+
+    "//_ADDED_FOR_CORE_V2": "Field 'type' dibutuhkan oleh AppManagerService baru",
+    "type": "apps",
+
+    "author": "Flowork System",
+    "tier": "utility",
+
+    "//_METADATA_FOR_MUSCLE": "Config for AppRuntime",
+    "entry_point": "main.py",
+    "runtime": "python",
+
+    "//_LEGACY_PERMISSIONS": ["filesystem_access", "sandboxing"],
+    "permissions": [
+        "filesystem.read",
+        "filesystem.write"
+    ],
+
+    "gui": {
+        "enabled": true,
+        "dashboard_path": "index.html",
+        "icon": "mdi-harddisk"
+    },
+    "nodes": [],
+    "capabilities": ["filesystem_access", "sandboxing"],
+    "tags": ["utility", "system", "files"],
+
+    "//_PHASE_1_REGISTRY": "Agar Router Cerdas bisa menemukan layanan ini",
+    "provided_services": [
+        "file_management",
+        "file_browser"
+    ]
+}

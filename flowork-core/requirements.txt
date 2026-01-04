@@ -1,0 +1,44 @@
+# --- BUILD TOOLS ---
+packaging
+wheel
+setuptools
+cython
+
+# --- SYSTEM & SERVER ---
+eventlet
+python-socketio
+psutil
+GPUtil
+requests
+httpx
+pydantic
+apscheduler
+python-dotenv
+flask
+flask-cors
+watchdog
+pycryptodome
+cryptography
+python-dateutil
+toml
+msgpack
+prometheus-client
+aiohttp
+aiofiles
+websockets
+werkzeug
+SQLAlchemy
+flask-migrate
+
+# --- AI PROVIDERS CONDUITS ---
+google-generativeai     # [GEMINI ADDED] Fixes provider error
+
+# --- IDENTITY & SECURITY ---
+web3
+eth-account
+
+# --- TELEMETRY ---
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp-proto-http
+prometheus-flask-exporter

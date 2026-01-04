@@ -1,0 +1,17 @@
+{
+    "id": "deepseek_provider",
+    "name": "DeepSeek AI Provider",
+    "version": "1.0",
+    "author": "FLOWORK DEV",
+    "description": "Provides connectivity with DeepSeek's advanced models (V3 & R1).",
+    "type": "AI_PROVIDER",
+    "entry_point": "provider.DeepSeekProvider",
+    "category": "text",
+    "requires_variables": [
+        {
+            "name": "DEEPSEEK_API_KEY",
+            "description": "Your API Key from DeepSeek Platform.",
+            "is_secret": true
+        }
+    ]
+}

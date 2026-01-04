@@ -1,0 +1,7 @@
+C:\FLOWORK\flowork-core\flowork_kernel\kernel_logic.py
+C:\FLOWORK\flowork-core\flowork_kernel\services\app_manager_service\app_manager_service.py
+C:\FLOWORK\flowork-core\flowork_kernel\workers\job_worker.py
+C:\FLOWORK\flowork-core\flowork_kernel\services\node_manager_service\node_manager_service.py
+C:\FLOWORK\app\flowork_architect\backend\app_router.py
+C:\FLOWORK\app\flowork_architect\backend\app_service.py
+C:\FLOWORK\docker-compose.yml
