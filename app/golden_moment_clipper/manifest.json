@@ -1,0 +1,79 @@
+{
+    "id": "golden_moment_clipper",
+    "name": "Golden Moment Studio",
+    "version": "3.0.0",
+    "description": "AI-powered video clipper factory. Auto-detect highlights, smart crop, and karaoke subtitles.",
+    "category": "tools",
+
+    "//_ADDED_FOR_CORE_V2": "Field 'type' dibutuhkan oleh AppManagerService baru",
+    "type": "apps",
+
+    "author": "Flowork Cyber Division",
+    "tier": "architect",
+
+    "//_METADATA_FOR_MUSCLE": "Config for AppRuntime",
+    "entry_point": "main.py",
+    "runtime": "python",
+
+    "//_LEGACY_PERMISSIONS": ["filesystem", "vram_access"],
+    "permissions": [
+        "filesystem.read",
+        "filesystem.write",
+        "hardware.gpu"
+    ],
+
+    "//_METADATA_FOR_BROWSER": "Konfigurasi untuk Frontend (Wajah)",
+    "gui": {
+        "enabled": true,
+        "dashboard_path": "index.html",
+        "icon": "mdi-movie-edit"
+    },
+
+    "nodes": [
+        {
+            "id": "golden_clipper_process",
+            "name": "Golden Clipper",
+            "description": "Process videos based on timestamps and AI settings via Muscle.",
+            "entry_class": "GoldenClipperNode",
+            "file": "backend/node.py",
+            "inputs": [
+                {
+                    "name": "input_folder_path",
+                    "label": "Source Video Folder",
+                    "type": "string",
+                    "placeholder": "/path/to/source",
+                    "default": ""
+                },
+                {
+                    "name": "output_folder",
+                    "label": "Output Destination",
+                    "type": "string",
+                    "placeholder": "/path/to/output",
+                    "default": ""
+                },
+                {
+                    "name": "timestamps",
+                    "label": "Timestamps Config",
+                    "type": "string",
+                    "ui_type": "textarea",
+                    "placeholder": "00:00:10-00:00:30|1",
+                    "default": ""
+                }
+            ],
+            "outputs": [
+                { "name": "success", "type": "object" },
+                { "name": "error", "type": "string" }
+            ]
+        }
+    ],
+
+    "capabilities": ["filesystem_access", "vram_isolation", "background_task"],
+    "tags": ["video", "ai", "editor", "content-creation"],
+
+    "//_PHASE_1_REGISTRY": "Agar Router Cerdas bisa menemukan layanan ini",
+    "provided_services": [
+        "video_processing",
+        "highlight_detection",
+        "ai_subtitles"
+    ]
+}

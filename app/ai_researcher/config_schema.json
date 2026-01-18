@@ -1,0 +1,11 @@
+{
+    "variables": [
+        {
+            "key": "OPENAI_API_KEY",
+            "label": "OpenAI API Key",
+            "type": "password",
+            "required": true,
+            "description": "Your OpenAI API Key which can be obtained from platform.openai.com."
+        }
+    ]
+}

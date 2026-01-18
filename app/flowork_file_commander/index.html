@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flowork File Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css" rel="stylesheet">
+    <style>
+        :root { --bg: #050505; --panel: #0a0f14; --cyan: #00f3ff; --red: #ff0055; --green: #00ff66; --text: #e0f0ff; }
+        body { background: var(--bg); color: var(--text); font-family: 'Rajdhani', sans-serif; overflow: hidden; }
+        .glass { background: rgba(10, 15, 20, 0.95); border: 1px solid rgba(0, 243, 255, 0.2); }
+        .item-card { position: relative; }
+        .item-card:hover { background: rgba(0, 243, 255, 0.1); border-color: var(--cyan); }
+        .item-card.selected { background: rgba(0, 243, 255, 0.2); border-color: var(--cyan); box-shadow: 0 0 10px rgba(0, 243, 255, 0.1); }
+        .scroll-custom::-webkit-scrollbar { width: 6px; }
+        .scroll-custom::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        .cyber-checkbox { appearance: none; width: 18px; height: 18px; border: 1px solid #555; background: #222; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .cyber-checkbox:checked { background: var(--cyan); border-color: var(--cyan); }
+        .cyber-checkbox:checked::after { content: '✔'; font-size: 12px; color: black; font-weight: bold; }
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: rgba(10, 15, 20, 0.95); border-left: 4px solid var(--cyan); color: white; padding: 12px 20px; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-family: 'JetBrains Mono', monospace; font-size: 13px; min-width: 250px; animation: slideIn 0.3s ease-out; display: flex; align-items: center; gap: 10px; }
+        .toast.error { border-left-color: var(--red); }
+        .toast.success { border-left-color: var(--green); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        .modal-overlay { background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px); }
+        .progress-bar { height: 4px; background: #333; width: 100%; border-radius: 2px; overflow: hidden; margin-top: 10px; }
+        .progress-fill { height: 100%; background: var(--cyan); width: 0%; transition: width 0.1s; box-shadow: 0 0 10px var(--cyan); }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-4 gap-4">
+
+    <div class="glass h-16 rounded-xl flex items-center px-6 justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <i class="mdi mdi-harddisk text-3xl text-[var(--cyan)]"></i>
+            <div>
+                <h1 class="font-bold text-xl tracking-widest text-white">FILE COMMANDER</h1>
+                <p class="text-xs text-gray-500 font-mono">SECURE SANDBOX ENVIRONMENT</p>
+            </div>
+        </div>
+        <div class="flex gap-2 items-center">
+            <button onclick="toggleSelectAll()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1 rounded border border-gray-700 transition text-sm flex items-center gap-2">
+                <i class="mdi mdi-checkbox-multiple-marked-outline"></i> Select All
+            </button>
+            <div class="w-px h-8 bg-gray-700 mx-2"></div>
+
+            <input type="text" id="newItemName" placeholder="Name..." class="bg-black/50 border border-gray-700 rounded px-3 text-sm focus:border-[var(--cyan)] outline-none text-white w-40 h-8 font-mono">
+
+            <button onclick="createItem('folder')" class="bg-gray-800 hover:bg-gray-700 text-[var(--cyan)] px-3 py-1 rounded border border-gray-700 transition" title="Create Folder">
+                <i class="mdi mdi-folder-plus"></i> Folder
+            </button>
+            <button onclick="createItem('file')" class="bg-gray-800 hover:bg-gray-700 text-[var(--green)] px-3 py-1 rounded border border-gray-700 transition" title="Create File">
+                <i class="mdi mdi-file-plus"></i> File
+            </button>
+
+            <div class="w-px h-8 bg-gray-700 mx-2"></div>
+            <button onclick="refresh()" class="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded border border-gray-700 transition" title="Refresh">
+                <i class="mdi mdi-refresh"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="flex-1 glass rounded-xl flex flex-col overflow-hidden relative">
+        <div class="bg-black/30 p-3 border-b border-gray-800 flex items-center gap-2 font-mono text-sm text-gray-400 overflow-x-auto whitespace-nowrap">
+            <i class="mdi mdi-home text-[var(--cyan)] cursor-pointer hover:text-white" onclick="loadDir('')" title="Home"></i>
+            <i id="backBtn" class="mdi mdi-arrow-left text-[var(--cyan)] cursor-pointer hover:text-white hidden" onclick="goBack()" title="Back"></i>
+            <span id="breadcrumb">/</span>
+        </div>
+        <div id="fileGrid" class="flex-1 overflow-y-auto p-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 content-start scroll-custom"></div>
+
+        <div id="batchToolbar" class="absolute bottom-0 left-0 w-full bg-[var(--panel)] border-t border-[var(--cyan)] p-3 flex justify-between items-center transform translate-y-full transition-transform duration-300 z-10 shadow-2xl">
+            <div class="flex items-center gap-3">
+                <span class="bg-[var(--cyan)] text-black font-bold px-2 py-1 rounded text-xs" id="selectedCount">0</span>
+                <span class="text-sm font-mono text-gray-300">Items Selected</span>
+            </div>
+            <button onclick="requestBatchDelete()" class="bg-[var(--red)] hover:bg-red-600 text-white px-4 py-2 rounded font-bold text-sm flex items-center gap-2 transition">
+                <i class="mdi mdi-delete-sweep"></i> DELETE SELECTED
+            </button>
+        </div>
+    </div>
+
+    <div id="previewModal" class="fixed inset-0 bg-black/90 hidden z-50 flex items-center justify-center p-10 backdrop-blur-sm">
+        <div class="glass w-full max-w-4xl h-full max-h-[80vh] flex flex-col rounded-xl shadow-2xl">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
+                <span class="font-mono text-[var(--cyan)]" id="previewTitle">filename.txt</span>
+                <button onclick="closePreview()" class="text-red-500 hover:text-white"><i class="mdi mdi-close text-xl"></i></button>
+            </div>
+            <pre id="previewContent" class="flex-1 p-4 overflow-auto font-mono text-xs text-gray-300 bg-[#0d1117] selection:bg-[var(--cyan)] selection:text-black whitespace-pre-wrap break-words"></pre>
+            <div class="p-3 border-t border-gray-700 bg-gray-900/50 flex justify-between items-center">
+                <span class="text-xs text-gray-500">Read-only Mode</span>
+                <button id="modalDownloadBtn" class="bg-[var(--cyan)] hover:bg-cyan-400 text-black px-4 py-2 rounded font-bold text-sm flex items-center gap-2 transition">
+                    <i class="mdi mdi-download"></i> DOWNLOAD
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="renameModal" class="fixed inset-0 modal-overlay hidden z-[65] flex items-center justify-center">
+        <div class="glass w-96 rounded-xl p-6 shadow-2xl border border-[var(--cyan)]">
+            <div class="flex items-center gap-3 mb-4 text-[var(--cyan)]">
+                <i class="mdi mdi-pencil text-2xl"></i>
+                <h2 class="font-bold text-lg font-mono">RENAME ITEM</h2>
+            </div>
+            <input type="text" id="renameInput" class="w-full bg-black/50 border border-gray-700 rounded px-3 py-2 text-sm focus:border-[var(--cyan)] outline-none text-white mb-4 font-mono">
+            <input type="hidden" id="renameTarget">
+            <div class="flex justify-end gap-3">
+                <button onclick="closeRename()" class="px-4 py-2 rounded border border-gray-600 text-gray-400 hover:text-white transition text-sm">CANCEL</button>
+                <button onclick="confirmRename()" class="px-4 py-2 rounded bg-[var(--cyan)] text-black hover:bg-cyan-400 transition text-sm font-bold">SAVE</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="fixed inset-0 modal-overlay hidden z-[60] flex items-center justify-center">
+        <div class="glass w-96 rounded-xl p-6 shadow-2xl border border-red-900/50">
+            <div class="flex items-center gap-3 mb-4 text-[var(--red)]">
+                <i class="mdi mdi-alert-circle text-3xl"></i>
+                <h2 class="font-bold text-lg font-mono">CONFIRM ACTION</h2>
+            </div>
+            <p class="text-gray-300 text-sm mb-6" id="confirmMessage">Are you sure?</p>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeConfirm(false)" class="px-4 py-2 rounded border border-gray-600 text-gray-400 hover:text-white transition text-sm">CANCEL</button>
+                <button onclick="closeConfirm(true)" class="px-4 py-2 rounded bg-[var(--red)] text-white hover:bg-red-600 transition text-sm font-bold">CONFIRM</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="downloadModal" class="fixed inset-0 modal-overlay hidden z-[70] flex items-center justify-center">
+        <div class="glass w-96 rounded-xl p-6 shadow-2xl border border-[var(--cyan)]">
+            <div class="flex items-center gap-3 mb-2 text-[var(--cyan)]">
+                <i class="mdi mdi-download-network text-3xl animate-pulse"></i>
+                <h2 class="font-bold text-lg font-mono">RETRIEVING DATA...</h2>
+            </div>
+            <p class="text-gray-400 text-xs mb-4" id="downloadFilename">file.zip</p>
+            <div class="progress-bar"><div id="downloadProgress" class="progress-fill"></div></div>
+            <div class="flex justify-between text-xs font-mono text-gray-500 mt-2"><span id="downloadPercent">0%</span><span>SECURE STREAM</span></div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script>
+        const APP_ID = "flowork_file_commander";
+        let currentPath = "";
+        let confirmCallback = null;
+        let selectedItems = new Set();
+
+        // --- UI HELPERS ---
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            let icon = type === 'error' ? 'mdi-alert-circle' : type === 'success' ? 'mdi-check-circle' : 'mdi-information';
+            el.innerHTML = `<i class="mdi ${icon} text-lg"></i> <span>${msg}</span>`;
+            container.appendChild(el);
+            setTimeout(() => {
+                el.style.animation = 'fadeOut 0.3s ease-out forwards';
+                setTimeout(() => el.remove(), 300);
+            }, 3000);
+        }
+
+        // Navigate to parent directory
+        function goBack() {
+            if (!currentPath) return;
+            let cleanPath = currentPath.replace(/\\/g, '/').replace(/\/$/, "");
+            if (cleanPath === "" || cleanPath === "/") return;
+
+            const parts = cleanPath.split('/');
+            parts.pop();
+            const parent = parts.join('/') || "/";
+            loadDir(parent);
+        }
+
+        function showConfirmDialog(msg, callback) {
+            document.getElementById('confirmMessage').innerText = msg;
+            document.getElementById('confirmModal').classList.remove('hidden');
+            confirmCallback = callback;
+        }
+
+        function closeConfirm(result) {
+            document.getElementById('confirmModal').classList.add('hidden');
+            if (result && confirmCallback) confirmCallback();
+            confirmCallback = null;
+        }
+
+        // --- BATCH SELECTION ---
+        function toggleItemSelection(path, element, e) {
+            e.stopPropagation();
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+            const checkbox = element.querySelector('.cyber-checkbox');
+            if (selectedItems.has(path)) {
+                selectedItems.delete(path);
+                element.classList.remove('selected');
+                checkbox.checked = false;
+            } else {
+                selectedItems.add(path);
+                element.classList.add('selected');
+                checkbox.checked = true;
+            }
+            updateBatchToolbar();
+        }
+
+        function updateBatchToolbar() {
+            const toolbar = document.getElementById('batchToolbar');
+            const count = document.getElementById('selectedCount');
+            count.innerText = selectedItems.size;
+            if (selectedItems.size > 0) toolbar.classList.remove('translate-y-full');
+            else toolbar.classList.add('translate-y-full');
+        }
+
+        function toggleSelectAll() {
+            const allCheckboxes = document.querySelectorAll('.cyber-checkbox');
+            const allCards = document.querySelectorAll('.item-card');
+            const allSelected = Array.from(allCheckboxes).every(cb => cb.checked);
+            if (allSelected) {
+                selectedItems.clear();
+                allCheckboxes.forEach(cb => cb.checked = false);
+                allCards.forEach(card => card.classList.remove('selected'));
+            } else {
+                allCheckboxes.forEach(cb => {
+                    cb.checked = true;
+                    selectedItems.add(cb.dataset.path);
+                });
+                allCards.forEach(card => card.classList.add('selected'));
+            }
+            updateBatchToolbar();
+        }
+
+        function requestBatchDelete() {
+            if (selectedItems.size === 0) return;
+            showConfirmDialog(`Delete ${selectedItems.size} selected items permanently?`, async () => {
+                const paths = Array.from(selectedItems);
+                const res = await callApi('batch_delete', { paths: paths });
+                if (res.status === 'success') {
+                    showToast(`Deleted ${res.deleted} items`, "success");
+                    selectedItems.clear();
+                    updateBatchToolbar();
+                    loadDir(currentPath);
+                } else {
+                    showToast("Batch delete failed", "error");
+                }
+            });
+        }
+
+        // --- RENAME ---
+        function requestRename(path, currentName, e) {
+            e.stopPropagation();
+            document.getElementById('renameTarget').value = path;
+            const input = document.getElementById('renameInput');
+            input.value = currentName;
+            document.getElementById('renameModal').classList.remove('hidden');
+            input.focus();
+        }
+
+        function closeRename() { document.getElementById('renameModal').classList.add('hidden'); }
+
+        async function confirmRename() {
+            const path = document.getElementById('renameTarget').value;
+            const newName = document.getElementById('renameInput').value;
+            if (!newName) return showToast("Name cannot be empty", "error");
+            const res = await callApi('rename', { path: path, new_name: newName });
+            if (res.status === 'success') {
+                showToast("Item Renamed", "success");
+                closeRename();
+                loadDir(currentPath);
+            } else showToast(res.error, "error");
+        }
+
+        // --- API CORE ---
+        async function callApi(action, payload = {}) {
+            try {
+                const res = await fetch(`/api/v1/apps/execute/${APP_ID}/${action}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (e) {
+                console.error("API Error:", e);
+                return { error: "Connection Error" };
+            }
+        }
+
+        function downloadFile(path, filename) {
+            const modal = document.getElementById('downloadModal');
+            const pBar = document.getElementById('downloadProgress');
+            const pText = document.getElementById('downloadPercent');
+            const fName = document.getElementById('downloadFilename');
+            modal.classList.remove('hidden');
+            fName.innerText = filename;
+            pBar.style.width = '0%'; pText.innerText = '0%';
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `/api/v1/apps/execute/${APP_ID}/download_file`, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.responseType = 'blob';
+            xhr.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    pBar.style.width = percentComplete + '%'; pText.innerText = percentComplete + '%';
+                } else { pBar.style.width = '100%'; pText.innerText = 'Streaming...'; }
+            };
+            xhr.onload = function() {
+                modal.classList.add('hidden');
+                if (this.status === 200) {
+                    const blob = this.response;
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = filename;
+                    document.body.appendChild(a); a.click();
+                    window.URL.revokeObjectURL(url); document.body.removeChild(a);
+                    showToast("Download Complete", "success");
+                } else showToast("Download Failed", "error");
+            };
+            xhr.onerror = function() { modal.classList.add('hidden'); showToast("Network Error", "error"); };
+            xhr.send(JSON.stringify({ path: path }));
+        }
+
+        async function loadDir(path = "") {
+            selectedItems.clear();
+            updateBatchToolbar();
+            const grid = document.getElementById('fileGrid');
+            grid.innerHTML = '<div class="text-gray-500 col-span-full text-center py-10"><i class="mdi mdi-loading mdi-spin text-2xl"></i><br>Scanning Sector...</div>';
+
+            const res = await callApi('browse', { path });
+
+            if (res.error) {
+                grid.innerHTML = `<div class="text-red-500 col-span-full text-center py-10 border border-red-900 bg-red-900/10 rounded">${res.error}</div>`;
+                showToast(res.error, "error");
+                return;
+            }
+            currentPath = res.current_path;
+            renderBreadcrumb(currentPath);
+            renderGrid(res.items);
+        }
+
+        function renderBreadcrumb(path) {
+            const backBtn = document.getElementById('backBtn');
+            const breadContainer = document.getElementById('breadcrumb');
+
+            if(backBtn) {
+                const isRoot = !path || path === "/" || path === "" || path.endsWith('/users/system') || (path.includes('/users/') && path.split('/users/')[1].split('/').filter(x => x).length <= 1);
+                if (!isRoot) backBtn.classList.remove('hidden');
+                else backBtn.classList.add('hidden');
+            }
+
+            // [ZOMBIE] document.getElementById('breadcrumb').innerText = display;
+            breadContainer.innerHTML = "";
+
+            let basePath = "";
+            let segments = [];
+            let rootLabel = "ROOT";
+
+            // Deteksi Root Label berdasarkan environment
+            if (path.includes('/users/')) {
+                const parts = path.split('/users/');
+                const idPart = parts[1].split('/')[0];
+                basePath = parts[0] + '/users/' + idPart;
+                segments = parts[1].split('/').slice(1).filter(x => x);
+                rootLabel = "ROOT";
+            } else if (path.includes('system')) {
+                const parts = path.split('system');
+                basePath = parts[0] + 'system';
+                segments = (parts[1] || "").split('/').filter(x => x);
+                rootLabel = "SYSTEM";
+            } else {
+                // Fallback rendering jika tidak sesuai skema user
+                const display = path || "/";
+                const textNode = document.createTextNode(display);
+                breadContainer.appendChild(textNode);
+                return;
+            }
+
+            // Create Clickable Root (Home/Root Folder)
+            const rootLink = document.createElement('span');
+            rootLink.className = "hover:text-white cursor-pointer transition text-[var(--cyan)]";
+            rootLink.innerText = rootLabel;
+            rootLink.onclick = () => loadDir(basePath);
+            breadContainer.appendChild(rootLink);
+
+            let currentAcc = basePath;
+            segments.forEach((seg, index) => {
+                // Render Separator
+                const sep = document.createElement('span');
+                sep.innerText = " / ";
+                sep.className = "text-gray-600 px-1";
+                breadContainer.appendChild(sep);
+
+                // Render Clickable Segment
+                currentAcc += "/" + seg;
+                const link = document.createElement('span');
+                link.innerText = seg;
+
+                // Segment terakhir tidak perlu jadi link (posisi sekarang)
+                if (index === segments.length - 1) {
+                    link.className = "text-gray-300";
+                } else {
+                    link.className = "hover:text-white cursor-pointer transition";
+                    const target = currentAcc;
+                    link.onclick = () => loadDir(target);
+                }
+                breadContainer.appendChild(link);
+            });
+        }
+
+        function renderGrid(items) {
+            const grid = document.getElementById('fileGrid');
+            grid.innerHTML = "";
+            if (!items || items.length === 0) {
+                grid.innerHTML = '<div class="text-gray-600 col-span-full text-center py-20 italic">Empty Directory</div>';
+                return;
+            }
+
+            items.sort((a, b) => {
+                if (a.type === b.type) return a.name.localeCompare(b.name);
+                return a.type === 'folder' ? -1 : 1;
+            });
+
+            items.forEach(item => {
+                const el = document.createElement('div');
+                el.className = "item-card border border-gray-800 bg-gray-900/50 p-3 rounded-lg flex flex-col gap-2 cursor-pointer transition group relative overflow-hidden";
+                const safePath = item.path.replace(/\\/g, '/');
+
+                let icon = item.icon || (item.type === "folder" ? "mdi-folder" : "mdi-file-outline");
+                let color = item.type === "folder" ? "text-yellow-500" : "text-blue-400";
+
+                if(item.name === "..") {
+                    icon = "mdi-arrow-up-bold-box-outline"; color = "text-[var(--cyan)]";
+                    el.onclick = () => {
+                        const parent = currentPath.split('/').slice(0, -1).join('/');
+                        loadDir(parent);
+                    };
+                } else {
+                    el.onclick = (e) => toggleItemSelection(safePath, el, e);
+                }
+
+                let actions = "";
+                let checkboxHTML = "";
+
+                if (item.name !== "..") {
+                    checkboxHTML = `<input type="checkbox" class="cyber-checkbox absolute top-2 left-2 z-10" data-path="${safePath}" onclick="event.stopPropagation(); toggleItemSelection('${safePath}', this.closest('.item-card'), event)">`;
+                    let downloadBtn = "";
+                    if (item.type === 'file') {
+                        downloadBtn = `<button onclick="event.stopPropagation(); downloadFile('${safePath}', '${item.name}')" class="text-gray-400 hover:text-[var(--cyan)] transition" title="Download"><i class="mdi mdi-download"></i></button>`;
+                    }
+                    actions = `
+                    <div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition bg-black/80 rounded px-2 py-1 backdrop-blur-sm z-20">
+                        ${downloadBtn}
+                        <button onclick="requestRename('${safePath}', '${item.name}', event)" class="text-gray-400 hover:text-yellow-400 transition" title="Rename"><i class="mdi mdi-pencil"></i></button>
+                        <button onclick="requestDelete('${safePath}', event)" class="text-gray-400 hover:text-[var(--red)] transition" title="Delete"><i class="mdi mdi-delete"></i></button>
+                    </div>`;
+                }
+
+                let openAction = "";
+                if(item.name !== "..") {
+                    if (item.type === 'folder') {
+                        openAction = `onclick="event.stopPropagation(); loadDir('${safePath}')"`;
+                    } else {
+                        openAction = `onclick="event.stopPropagation(); previewFile('${safePath}', '${item.name}')"`;
+                    }
+                }
+
+                el.innerHTML = `
+                    ${checkboxHTML}
+                    ${actions}
+                    <div ${openAction} class="self-center flex flex-col items-center w-full">
+                        <i class="mdi ${icon} ${color} text-4xl transition-transform group-hover:scale-110"></i>
+                        <span class="text-xs text-center truncate font-mono text-gray-300 select-none w-full mt-2" title="${item.name}">${item.name}</span>
+                    </div>
+                `;
+                grid.appendChild(el);
+            });
+        }
+
+        async function createItem(type) {
+            const nameInput = document.getElementById('newItemName');
+            const name = nameInput.value.trim();
+            if(!name) { showToast(`Enter ${type} name`, "error"); return; }
+
+            const action = type === 'folder' ? 'create_folder' : 'create_file';
+            const res = await callApi(action, { path: currentPath, name: name });
+
+            if(res.status === 'success') {
+                showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} created`, "success");
+                nameInput.value = "";
+                loadDir(currentPath);
+            } else {
+                showToast(res.error, "error");
+            }
+        }
+
+        function requestDelete(path, e) {
+            e.stopPropagation();
+            showConfirmDialog("Permanently delete this item?", async () => {
+                const res = await callApi('delete', { path });
+                if(res.status === 'success') { showToast("Deleted", "success"); loadDir(currentPath); }
+                else showToast(res.error, "error");
+            });
+        }
+
+        async function previewFile(path, name) {
+            const modal = document.getElementById('previewModal');
+            const content = document.getElementById('previewContent');
+            const title = document.getElementById('previewTitle');
+            const dlBtn = document.getElementById('modalDownloadBtn');
+            content.innerText = "Loading content...";
+            modal.classList.remove('hidden');
+            title.innerText = name;
+            dlBtn.onclick = () => downloadFile(path, name);
+
+            const res = await callApi('read_file', { path });
+
+            if(res.error) {
+                content.innerText = `[INFO] ${res.error}`;
+                content.className = "flex-1 p-4 overflow-auto font-mono text-xs text-yellow-400 bg-[#0d1117] flex items-center justify-center";
+            } else {
+                content.innerText = res.content;
+                content.className = "flex-1 p-4 overflow-auto font-mono text-xs text-gray-300 bg-[#0d1117] selection:bg-[var(--cyan)] selection:text-black whitespace-pre-wrap break-words";
+            }
+        }
+
+        function closePreview() { document.getElementById('previewModal').classList.add('hidden'); }
+        function refresh() { loadDir(currentPath); showToast("Refreshed", "info"); }
+
+        loadDir("");
+    </script>
+</body>
+</html>

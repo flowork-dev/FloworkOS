@@ -1,0 +1,18 @@
+{
+    "variables": [
+        {
+            "key": "YOUTUBE_API_KEY",
+            "label": "YouTube Data API Key",
+            "type": "password",
+            "required": true,
+            "description": "Used to fetch video details and comments from YouTube."
+        },
+        {
+            "key": "OPENAI_API_KEY",
+            "label": "OpenAI API Key",
+            "type": "password",
+            "required": true,
+            "description": "Used to analyze comment sentiment and generate summaries."
+        }
+    ]
+}

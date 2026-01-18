@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Iron Canvas - Flowork Architect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #09090b; --bg-surface: #121214; --border-color: #27272a; --accent-color: #3b82f6; --text-zoom: 100%;
+            /* Glow Colors (used for shadows) */
+            --glow-partners: rgba(139, 92, 246, 0.4);
+            --glow-activities: rgba(59, 130, 246, 0.4);
+            --glow-resources: rgba(14, 165, 233, 0.4);
+            --glow-value: rgba(236, 72, 153, 0.6);
+            --glow-relations: rgba(244, 63, 94, 0.4);
+            --glow-channels: rgba(245, 158, 11, 0.4);
+            --glow-segments: rgba(16, 185, 129, 0.4);
+            --glow-cost: rgba(239, 68, 68, 0.4);
+            --glow-revenue: rgba(34, 197, 94, 0.4);
+            --glow-flowork: rgba(59, 130, 246, 0.7);
+        }
+        body { font-family: 'Outfit', sans-serif; background: var(--bg-body); color: #e4e4e7; }
+
+        #sidebar { width: 260px; background: #121214; border-right: 1px solid var(--border-color); transition: transform 0.3s ease; position: fixed; height: 100vh; z-index: 100; }
+        #sidebar.closed { transform: translateX(-100%); }
+        #main-content { margin-left: 260px; transition: margin-left 0.3s ease; width: calc(100% - 260px); }
+        #main-content.expanded { margin-left: 0; width: 100%; }
+
+        /* HISTORY CLICK FIX */
+        .history-item { padding: 12px 15px; border-bottom: 1px solid #222; cursor: pointer; transition: 0.2s; position: relative; }
+        .history-item:hover { background: #1A1A1C; border-left: 3px solid var(--accent-color); }
+        .history-item.active { background: #1f2937; border-left: 3px solid var(--accent-color); }
+        .history-actions { display: none; position: absolute; right: 10px; top: 12px; gap: 5px; z-index: 101; }
+        .history-item:hover .history-actions { display: flex; }
+
+        .bmc-grid { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(3, 1fr); gap: 12px; height: calc(100vh - 140px); padding: 20px; }
+
+        /* BMC BOX - High Contrast Neon Edition */
+        .bmc-box {
+            /* background: var(--bg-surface); */ /* REMOVED: Now using variable BG */
+            background: var(--box-bg, var(--bg-surface)); /* ADDED: Variable background */
+            border: 1px solid var(--border-color); border-radius: 12px; padding: 20px;
+            display: flex; flex-direction: column; position: relative; overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: breathe 5s infinite ease-in-out;
+        }
+        .bmc-box:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.3); z-index: 10; }
+        .span-2-row { grid-row: span 2; } .span-2-col { grid-column: span 2; }
+
+        /* Specific High-Contrast Color Schemes (BG darker tint, Text lighter) */
+        #box_key_partners {
+            border-top: 3px solid #8b5cf6; --glow-box: var(--glow-partners);
+            --box-bg: rgba(58, 33, 122, 0.3); --box-text: #e9d5ff; /* Purple theme */
+        }
+        #box_key_activities {
+            border-top: 3px solid #3b82f6; --glow-box: var(--glow-activities);
+            --box-bg: rgba(23, 73, 160, 0.3); --box-text: #dbeafe; /* Blue theme */
+        }
+        #box_key_resources {
+            border-top: 3px solid #0ea5e9; --glow-box: var(--glow-resources);
+            --box-bg: rgba(12, 95, 136, 0.3); --box-text: #e0f2fe; /* Sky blue theme */
+        }
+        #box_value_propositions {
+            border: 2px solid #ec4899; border-top-width: 4px; --glow-box: var(--glow-value);
+            --box-bg: rgba(131, 24, 83, 0.35); --box-text: #ffffff; /* Pink theme (Hero) */
+        }
+        #box_customer_relationships {
+            border-top: 3px solid #f43f5e; --glow-box: var(--glow-relations);
+            --box-bg: rgba(136, 25, 49, 0.3); --box-text: #ffe4e6; /* Rose theme */
+        }
+        #box_channels {
+            border-top: 3px solid #f59e0b; --glow-box: var(--glow-channels);
+            --box-bg: rgba(124, 82, 14, 0.3); --box-text: #ffedd5; /* Orange theme */
+        }
+        #box_customer_segments {
+            border-top: 3px solid #10b981; --glow-box: var(--glow-segments);
+            --box-bg: rgba(6, 95, 70, 0.3); --box-text: #d1fae5; /* Emerald theme */
+        }
+        #box_cost_structure {
+            border-top: 3px solid #ef4444; --glow-box: var(--glow-cost);
+            --box-bg: rgba(127, 29, 29, 0.3); --box-text: #fee2e2; /* Red theme */
+        }
+        #box_revenue_streams {
+            border-top: 3px solid #22c55e; --glow-box: var(--glow-revenue);
+            --box-bg: rgba(20, 83, 45, 0.3); --box-text: #dcfce7; /* Green theme */
+        }
+
+        @keyframes breathe {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.5), 0 0 5px var(--glow-box); }
+            50% { box-shadow: 0 4px 25px rgba(0,0,0,0.6), 0 0 15px var(--glow-box); }
+        }
+
+        /* FLOWORK CORE REACTOR */
+        .flowork-reactor-space {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0.8; transition: 0.3s;
+        }
+        .flowork-reactor-space:hover { opacity: 1; filter: drop-shadow(0 0 15px var(--glow-flowork)); }
+        .reactor-core {
+            width: 50px; height: 50px; background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 30px var(--glow-flowork); animation: spin-reactor 10s infinite linear;
+        }
+        @keyframes spin-reactor { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* EDITABLE CONTENT */
+        .bmc-content {
+            font-size: var(--text-zoom); line-height: 1.6; white-space: pre-wrap; flex: 1; overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            /* color: #a1a1aa; */ /* REMOVED: Old generic color */
+            color: var(--box-text, #a1a1aa); /* ADDED: Variable text color for contrast */
+            margin-top: 10px; outline: none; border-radius: 4px;
+        }
+        .bmc-content:focus { background: rgba(255,255,255,0.1); color: #fff; padding: 5px; }
+
+        .bmc-content strong { color: #fff; font-weight: 700; text-shadow: 0 0 5px currentColor; }
+        .bmc-content ul { list-style-type: disc; padding-left: 20px; }
+
+        .glass-header { background: rgba(18, 18, 20, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-color); }
+        .thinking-line { height: 2px; background: linear-gradient(90deg, transparent, #3b82f6, #fff, #3b82f6, transparent); width: 100%; position: absolute; top: 0; left: 0; animation: slide 2s infinite linear; display: none; box-shadow: 0 0 10px #3b82f6; }
+        @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+        /* ACTIONS */
+        .box-actions { opacity: 0; transition: 0.2s; display: flex; gap: 8px; }
+        .bmc-box:hover .box-actions { opacity: 1; }
+        .action-btn { cursor: pointer; color: var(--box-text); opacity: 0.7; transition: 0.2s; }
+        .action-btn:hover { color: #fff; opacity: 1; transform: scale(1.2); }
+
+        /* INFO TOOLTIP */
+        .info-tooltip {
+            visibility: hidden; width: 220px; background-color: #1a1a1c; color: #fff; text-align: left;
+            border: 1px solid #333; border-radius: 6px; padding: 10px; position: absolute; z-index: 50; top: 120%; left: 0;
+            font-size: 11px; font-weight: normal; line-height: 1.4; box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: 0.3s;
+        }
+        .has-tooltip:hover .info-tooltip { visibility: visible; opacity: 1; }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 200; display: none; align-items: center; justify-content: center; }
+        .modal-box { background: #121214; border: 1px solid #333; padding: 24px; border-radius: 12px; width: 400px; }
+        .modal-overlay.open { display: flex; }
+        .provider-checkbox:checked + label { background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; color: #fff; }
+        ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <div id="renameModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 class="text-white font-bold mb-4">Rename Session</h3>
+            <input type="text" id="renameInput" class="w-full bg-[#09090b] border border-[#333] p-2 rounded text-white mb-4 focus:border-blue-500 outline-none">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('renameModal')" class="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
+                <button onclick="confirmRename()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteModal" class="modal-overlay">
+        <div class="modal-box text-center">
+            <h3 class="text-white font-bold mb-2">Delete Session?</h3>
+            <p class="text-gray-400 text-sm mb-6">This action will permanently purge the data.</p>
+            <div class="flex justify-center gap-3">
+                <button onclick="closeModal('deleteModal')" class="px-6 py-2 text-gray-400 hover:text-white">Abort</button>
+                <button onclick="confirmDelete()" class="px-8 py-2 bg-red-600 text-white rounded hover:bg-red-500 font-bold">Purge</button>
+            </div>
+        </div>
+    </div>
+
+    <aside id="sidebar" class="flex flex-col">
+        <div class="p-4 border-b border-[#222] flex items-center justify-between">
+            <h2 class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Neural History</h2>
+            <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white"><i class="mdi mdi-close"></i></button>
+        </div>
+        <div id="historyList" class="flex-1 overflow-y-auto"></div>
+    </aside>
+
+    <div id="main-content" class="flex flex-col h-full relative">
+        <header class="bg-[#121214]/90 backdrop-blur border-b border-[#222] h-16 flex items-center justify-between px-6 z-50">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white mr-2"><i class="mdi mdi-menu text-xl"></i></button>
+                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg"><i class="mdi mdi-checkerboard text-white"></i></div>
+                <h1 class="text-lg font-bold tracking-tight text-white hidden md:block">THE IRON CANVAS</h1>
+            </div>
+
+            <div class="flex-1 max-w-3xl mx-8 flex gap-2">
+                <div class="flex items-center gap-1 mr-2 bg-[#1A1A1C] p-1 rounded-lg border border-[#333]">
+                    <input type="checkbox" id="prov-gpt" value="chatgpt" class="hidden provider-checkbox" checked>
+                    <label for="prov-gpt" class="cursor-pointer px-3 py-1.5 rounded text-[10px] font-bold text-gray-500 border border-transparent hover:text-white transition-all">GPT-4</label>
+                    <input type="checkbox" id="prov-gemini" value="gemini" class="hidden provider-checkbox" checked>
+                    <label for="prov-gemini" class="cursor-pointer px-3 py-1.5 rounded text-[10px] font-bold text-gray-500 border border-transparent hover:text-white transition-all">GEMINI</label>
+                    <input type="checkbox" id="prov-deepseek" value="deepseek" class="hidden provider-checkbox">
+                    <label for="prov-deepseek" class="cursor-pointer px-3 py-1.5 rounded text-[10px] font-bold text-gray-500 border border-transparent hover:text-white transition-all">DEEPSEEK</label>
+                </div>
+                <div class="relative group flex-1">
+                    <input type="text" id="topicInput" placeholder="Describe business idea..." class="w-full bg-[#1A1A1C] border border-[#333] rounded-lg py-2 px-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-all">
+                    <button onclick="startMeeting()" class="absolute right-1 top-1 h-8 w-8 bg-blue-600 rounded flex items-center justify-center text-white hover:bg-blue-500"><i class="mdi mdi-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="exportToImage()" class="text-gray-400 hover:text-white text-xs flex items-center gap-1 bg-[#1A1A1C] px-3 py-1.5 rounded border border-[#333] hover:border-blue-500 transition-all">
+                    <i class="mdi mdi-camera"></i> Export
+                </button>
+                <input type="range" min="80" max="200" value="100" class="w-20 h-1 bg-gray-700 rounded-lg cursor-pointer" oninput="changeZoom(this.value)">
+            </div>
+        </header>
+
+        <div id="statusBar" class="hidden h-8 bg-blue-900/10 border-b border-blue-500/10 flex items-center px-6 text-xs font-mono text-blue-400">
+            <i class="mdi mdi-loading mdi-spin mr-2"></i> <span id="statusText">Allocating Neural Resources...</span>
+        </div>
+
+        <main class="bmc-grid flex-1 overflow-y-auto" id="canvasGrid"></main>
+    </div>
+
+    <script>
+        const BASE_API = '/api/v1/apps/execute/biz_canvas_architect';
+        let pollInterval;
+        let currentJobId = null;
+        let targetActionId = null;
+
+        const BLOCKS = [
+            { id: "key_partners", title: "Key Partners", icon: "mdi-handshake", span: "span-2-row", info: "Siapa supplier, vendor, atau mitra strategis yang wajib ada?" },
+            { id: "key_activities", title: "Key Activities", icon: "mdi-cog-sync", span: "", info: "Kegiatan operasional terpenting." },
+            { id: "value_propositions", title: "Value Propositions", icon: "mdi-diamond-stone", span: "span-2-row", info: "Solusi unik yang Anda tawarkan." },
+            { id: "customer_relationships", title: "Customer Relations", icon: "mdi-heart-pulse", span: "", info: "Cara menjaga loyalitas pelanggan." },
+            { id: "customer_segments", title: "Customer Segments", icon: "mdi-target-account", span: "span-2-row", info: "Siapa target pasar spesifik Anda?" },
+            { id: "key_resources", title: "Key Resources", icon: "mdi-database", span: "", info: "Aset fisik, finansial, atau intelektual." },
+            { id: "channels", title: "Channels", icon: "mdi-map-marker-path", span: "", info: "Cara menjangkau pelanggan." },
+            { id: "cost_structure", title: "Cost Structure", icon: "mdi-cash-minus", span: "span-2-col", info: "Pengeluaran terbesar bisnis." },
+            { id: "revenue_streams", title: "Revenue Streams", icon: "mdi-cash-plus", span: "span-2-col", info: "Cara bisnis menghasilkan uang." }
+        ];
+
+        window.onload = function() { renderGrid(); loadHistory(); };
+
+        function renderGrid() {
+            const container = document.getElementById('canvasGrid');
+            container.innerHTML = '';
+            let html = '';
+            BLOCKS.forEach((b) => {
+                // LOGO IN THE GAP BEFORE REVENUE STREAMS
+                if (b.id === 'revenue_streams') {
+                    html += `
+                    <div class="flowork-reactor-space">
+                        <div class="reactor-core"><i class="mdi mdi-checkerboard text-white text-2xl"></i></div>
+                        <span class="mt-2 text-[19px] font-black text-blue-500 uppercase tracking-widest">Flowork.cloud</span>
+                    </div>`;
+                }
+                html += `
+                <div class="bmc-box ${b.span}" id="box_${b.id}">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="flex items-center gap-2 relative has-tooltip cursor-help">
+                            <h3 class="text-xs font-bold uppercase tracking-widest flex items-center gap-2" style="color: var(--box-text);">
+                                <i class="mdi ${b.icon}"></i> ${b.title}
+                            </h3>
+                            <i class="mdi mdi-information-outline text-[10px]" style="color: var(--box-text); opacity: 0.7;"></i>
+                            <div class="info-tooltip">${b.info}</div>
+                        </div>
+                        <div class="box-actions">
+                            <i onclick="regenerateBlock('${b.id}')" class="mdi mdi-refresh action-btn" title="Synthesize (AI)"></i>
+                        </div>
+                    </div>
+                    <div class="bmc-content" id="content_${b.id}" contenteditable="true" onblur="saveBlockManual('${b.id}')"></div>
+                    <div class="thinking-line" id="load_${b.id}"></div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function getSelectedProviders() {
+            const selected = [];
+            document.querySelectorAll('.provider-checkbox:checked').forEach(cb => selected.push(cb.value));
+            return selected.length > 0 ? selected : ['gemini'];
+        }
+
+        async function startMeeting() {
+            const topic = document.getElementById('topicInput').value;
+            if(!topic) return alert("Input business concept!");
+            document.getElementById('statusBar').classList.remove('hidden');
+            document.querySelectorAll('.thinking-line').forEach(el => el.style.display = 'block');
+            const res = await fetch(`${BASE_API}/generate`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ topic: topic, providers: getSelectedProviders() }) });
+            const data = await res.json();
+            if(data.job_id) { currentJobId = data.job_id; pollStatus(data.job_id); loadHistory(); }
+        }
+
+        async function saveBlockManual(blockId) {
+            if(!currentJobId) return;
+            const content = document.getElementById(`content_${blockId}`).innerHTML;
+            await fetch(`${BASE_API}/update_block`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ job_id: currentJobId, block_key: blockId, new_content: content }) });
+        }
+
+        async function regenerateBlock(blockId) {
+            if(!currentJobId) return alert("No active session.");
+            document.getElementById(`content_${blockId}`).style.opacity = '0.5';
+            document.getElementById(`load_${blockId}`).style.display = 'block';
+            const res = await fetch(`${BASE_API}/regenerate_block`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ job_id: currentJobId, block_key: blockId, providers: getSelectedProviders() }) });
+            const data = await res.json();
+            if(data.content) document.getElementById(`content_${blockId}`).innerHTML = marked.parse(data.content);
+            document.getElementById(`content_${blockId}`).style.opacity = '1';
+            document.getElementById(`load_${blockId}`).style.display = 'none';
+        }
+
+        function pollStatus(jobId) {
+            if(pollInterval) clearInterval(pollInterval);
+            fetchData(jobId);
+            pollInterval = setInterval(() => fetchData(jobId), 2500);
+        }
+
+        async function fetchData(jobId) {
+            const res = await fetch(`${BASE_API}/get_canvas`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ job_id: jobId }) });
+            const data = await res.json();
+            if(data && !data.error) {
+                currentJobId = data.id;
+                if(data.topic) document.getElementById('topicInput').value = data.topic;
+                if(data.logs?.length > 0) document.getElementById('statusText').innerText = data.logs[data.logs.length - 1];
+                if(data.canvas) {
+                    for (const [key, val] of Object.entries(data.canvas)) {
+                        const el = document.getElementById(`content_${key}`);
+                        if(el && document.activeElement !== el) el.innerHTML = marked.parse(val);
+                    }
+                }
+                if(data.status === 'completed' || data.status === 'error') {
+                    clearInterval(pollInterval);
+                    document.getElementById('statusBar').classList.add('hidden');
+                    document.querySelectorAll('.thinking-line').forEach(el => el.style.display = 'none');
+                    loadHistory();
+                }
+            }
+        }
+
+        async function loadHistory() {
+            const res = await fetch(`${BASE_API}/history`, { method: 'POST', body: JSON.stringify({}) });
+            if(res.ok) renderHistory(await res.json());
+        }
+
+        function renderHistory(list) {
+            const container = document.getElementById('historyList');
+            container.innerHTML = '';
+            list.forEach(item => {
+                const div = document.createElement('div');
+                div.className = `history-item group ${currentJobId === item.job_id ? 'active' : ''}`;
+                div.innerHTML = `
+                    <div class="font-bold truncate text-gray-300 text-sm">${item.topic}</div>
+                    <div class="text-[10px] text-gray-600 mt-1">${item.date}</div>
+                    <div class="history-actions">
+                        <button onclick="promptRename('${item.job_id}', event)" class="text-gray-400 hover:text-blue-400"><i class="mdi mdi-pencil"></i></button>
+                        <button onclick="promptDelete('${item.job_id}', event)" class="text-gray-400 hover:text-red-400"><i class="mdi mdi-delete"></i></button>
+                    </div>`;
+                div.onclick = (e) => {
+                    if(e.target.closest('button')) return;
+                    currentJobId = item.job_id;
+                    pollStatus(item.job_id);
+                    loadHistory();
+                };
+                container.appendChild(div);
+            });
+        }
+
+        function promptRename(id, e) {
+            if(e) e.stopPropagation();
+            targetActionId = id;
+            document.getElementById('renameInput').value = "";
+            document.getElementById('renameModal').classList.add('open');
+        }
+        function promptDelete(id, e) {
+            if(e) e.stopPropagation();
+            targetActionId = id;
+            document.getElementById('deleteModal').classList.add('open');
+        }
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); targetActionId = null; }
+
+        async function confirmRename() {
+            const newTitle = document.getElementById('renameInput').value;
+            if(newTitle && targetActionId) {
+                await fetch(`${BASE_API}/rename_history`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ job_id: targetActionId, new_title: newTitle }) });
+                loadHistory(); closeModal('renameModal');
+            }
+        }
+
+        async function confirmDelete() {
+            if(targetActionId) {
+                await fetch(`${BASE_API}/delete_history`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ job_id: targetActionId }) });
+                loadHistory(); closeModal('deleteModal');
+            }
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('closed'); document.getElementById('main-content').classList.toggle('expanded'); }
+        function changeZoom(val) { document.documentElement.style.setProperty('--text-zoom', val + '%'); }
+
+        function exportToImage() {
+            html2canvas(document.getElementById("canvasGrid"), { backgroundColor: "#09090b", scale: 2 }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Business-Blueprint-${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>

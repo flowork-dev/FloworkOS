@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Neural Dojo - Multi OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css" rel="stylesheet">
+    <style>
+        :root { --bg: #020617; --panel: rgba(15, 23, 42, 0.95); --primary: #6366f1; --accent: #06b6d4; }
+        body { background: var(--bg); color: #e2e8f0; font-family: 'Segoe UI', sans-serif; }
+        .glass { background: var(--panel); border: 1px solid rgba(99, 102, 241, 0.2); backdrop-filter: blur(5px); }
+        .cyber-input { background: rgba(0,0,0,0.3); border: 1px solid #334155; color: white; padding: 8px 12px; width: 100%; border-radius: 6px; outline: none; font-family: monospace; font-size: 12px; }
+        .cyber-input:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(99, 102, 241, 0.2); }
+        .btn-primary { background: var(--primary); color: white; font-weight: bold; border-radius: 6px; transition: 0.2s; cursor: pointer; }
+        .btn-primary:hover { background: #4f46e5; box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); }
+        .btn-primary:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; box-shadow: none; opacity: 0.7; }
+
+        /* FOLDER MODAL */
+        #folderModal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index: 9999; backdrop-filter: blur(2px); }
+        .modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0f172a; border: 1px solid var(--primary); width: 90%; max-width: 600px; height: 80vh; border-radius: 12px; display: flex; flex-direction: column; }
+        .folder-list { overflow-y: auto; flex: 1; border-top: 1px solid #334155; border-bottom: 1px solid #334155; }
+        .folder-item { padding: 10px 15px; border-bottom: 1px solid #1e293b; cursor: pointer; display: flex; align-items: center; gap: 12px; font-size: 13px; }
+        .folder-item:hover { background: rgba(99, 102, 241, 0.15); color: var(--primary); }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-4 gap-4 overflow-hidden">
+
+    <div id="folderModal">
+        <div class="modal-content">
+            <div class="p-4 border-b border-gray-800 flex justify-between items-center bg-slate-900/50 rounded-t-lg">
+                <h2 class="text-indigo-400 font-bold text-sm tracking-wider"><i class="mdi mdi-server-network mr-2"></i>SELECT DATASET FOLDER</h2>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-white"><i class="mdi mdi-close"></i></button>
+            </div>
+            <div class="px-4 py-2 bg-slate-950 text-xs font-mono text-gray-400 break-all border-b border-gray-800 flex items-center gap-2">
+                <i class="mdi mdi-folder-open text-indigo-500"></i><span id="currentPathDisplay">/</span>
+            </div>
+            <div id="folderList" class="folder-list bg-slate-900/30"></div>
+            <div class="p-4 flex gap-3 bg-slate-900/50 rounded-b-lg">
+                <button class="flex-1 py-2 rounded border border-gray-600 text-gray-400 text-xs font-bold" onclick="closeModal()">CANCEL</button>
+                <button class="flex-1 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-500 text-xs font-bold shadow-lg" onclick="selectCurrentFolder()">SELECT FOLDER</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app" class="h-full flex flex-col gap-4">
+        <header class="flex justify-between items-center p-4 glass rounded-lg shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-indigo-500/20 rounded-lg text-indigo-400"><i class="mdi mdi-brain text-2xl"></i></div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white">NEURAL DOJO <span class="text-xs px-2 py-0.5 rounded bg-indigo-900 text-indigo-300 ml-2">v2.6 Fixed</span></h1>
+                    <p class="text-xs text-gray-400">FloworkOS AI Training Facility</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button @click="refreshModels" class="px-3 py-1 rounded border border-slate-700 hover:bg-slate-800 text-xs text-gray-400" title="Refresh Local Models"><i class="mdi mdi-refresh"></i></button>
+                <div :class="statusClass" class="px-3 py-1 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-2 border">
+                    <i class="mdi mdi-circle text-[8px]"></i> {{ status.status }}
+                </div>
+                <div :class="isConnected ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' : 'bg-red-500/20 text-red-400 border-red-500/50'" class="px-2 py-1 rounded border flex items-center justify-center">
+                    <i class="mdi" :class="isConnected ? 'mdi-wifi' : 'mdi-wifi-off'"></i>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-12 gap-4 flex-1 overflow-hidden">
+            <div class="col-span-4 flex flex-col gap-4">
+                <div class="glass rounded-lg p-5 flex flex-col gap-4">
+                    <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-wider border-b border-indigo-500/20 pb-2">Training Configuration</h3>
+
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-2">Model Source</label>
+                        <div class="flex bg-slate-900 rounded p-1 border border-slate-700">
+                            <button @click="modelSource = 'hf'" :class="{'bg-indigo-600 text-white': modelSource === 'hf', 'text-gray-400 hover:text-white': modelSource !== 'hf'}" class="flex-1 py-1 rounded text-xs font-bold transition">HuggingFace</button>
+                            <button @click="modelSource = 'local'" :class="{'bg-indigo-600 text-white': modelSource === 'local', 'text-gray-400 hover:text-white': modelSource !== 'local'}" class="flex-1 py-1 rounded text-xs font-bold transition">Local Storage</button>
+                        </div>
+                    </div>
+
+                    <div v-if="modelSource === 'hf'">
+                        <label class="text-xs text-gray-400 block mb-1">Model ID (HuggingFace)</label>
+                        <input v-model="config.model_name" class="cyber-input" placeholder="e.g. bert-base-uncased">
+                    </div>
+                    <div v-else>
+                        <label class="text-xs text-gray-400 block mb-1">Select Local Model</label>
+                        <select v-model="config.model_name" class="cyber-input bg-slate-900">
+                            <option value="" disabled>-- Select a Model --</option>
+                            <option v-for="m in localModels" :value="m">{{ m }}</option>
+                        </select>
+                        <div v-if="localModels.length === 0" class="text-[10px] text-yellow-500 mt-1 italic">No local models found in /models_cache</div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Epochs</label>
+                            <input type="number" v-model="config.epochs" class="cyber-input">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Learning Rate</label>
+                            <input type="number" v-model="config.learning_rate" class="cyber-input" step="0.0001">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-1">Dataset Path</label>
+                        <div class="flex gap-2">
+                            <input v-model="config.dataset_path" class="cyber-input text-gray-400" readonly placeholder="Select folder...">
+                            <button @click="openBrowser" class="bg-slate-700 hover:bg-slate-600 text-white px-3 rounded text-sm"><i class="mdi mdi-folder-open"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-gray-800 mt-2">
+                        <button :disabled="!isConnected || status.is_training" @click="startTraining" class="btn-primary w-full py-3 shadow-lg shadow-indigo-500/20 flex justify-center items-center gap-2">
+                            <i v-if="!isConnected" class="mdi mdi-loading mdi-spin"></i>
+                            <span v-else><i class="mdi mdi-rocket-launch"></i> INITIALIZE TRAINING</span>
+                        </button>
+                        <button v-if="status.is_training" @click="stopTraining" class="bg-red-500 hover:bg-red-600 text-white font-bold w-full py-3 mt-2 rounded shadow-lg shadow-red-500/20 flex justify-center items-center gap-2">
+                            <i class="mdi mdi-stop"></i> ABORT SEQUENCE
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass rounded-lg p-4 flex-1 flex flex-col overflow-hidden h-48">
+                    <h3 class="text-xs font-bold text-gray-400 mb-2 uppercase">System Logs</h3>
+                    <div class="flex-1 overflow-y-auto font-mono text-[11px] space-y-1 pr-2 custom-scroll" ref="logContainer">
+                        <div v-for="log in status.logs" :class="getColor(log.level)" class="border-l-2 pl-2 py-0.5">
+                            <span class="opacity-50">[{{ log.time }}]</span> {{ log.message }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-8 flex flex-col gap-4">
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="glass p-4 rounded-lg border-t-2 border-emerald-500">
+                        <div class="text-xs text-gray-400">Loss</div>
+                        <div class="text-2xl font-mono font-bold text-emerald-400">{{ status.current_loss || '0.0000' }}</div>
+                    </div>
+                    <div class="glass p-4 rounded-lg border-t-2 border-blue-500">
+                        <div class="text-xs text-gray-400">Epoch</div>
+                        <div class="text-2xl font-mono font-bold text-blue-400">{{ status.current_epoch }} <span class="text-sm text-gray-500">/ {{ status.total_epochs }}</span></div>
+                    </div>
+                    <div class="glass p-4 rounded-lg border-t-2 border-purple-500">
+                        <div class="text-xs text-gray-400">Environment</div>
+                        <div class="text-lg font-mono font-bold text-purple-400 truncate">{{ envType }}</div>
+                    </div>
+                </div>
+                <div class="glass rounded-lg p-4 flex-1 relative flex flex-col">
+                    <h3 class="text-sm font-bold text-gray-400 absolute top-4 left-4">TRAINING METRICS</h3>
+                    <div class="flex-1 mt-6">
+                        <canvas id="lossChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, computed } = Vue;
+
+        // --- FLOWORK HYBRID BRIDGE ---
+        class FloworkBridge {
+            constructor() {
+                this.mode = window.pywebview ? 'desktop' : 'web';
+                this.appId = 'neural_dojo';
+                console.log(`🚀 Bridge Initialized: ${this.mode.toUpperCase()} MODE`);
+            }
+
+            async send(action, payload = {}) {
+                payload.action = action;
+
+                if (this.mode === 'desktop') {
+                    return await window.pywebview.api.run_app(this.appId, payload);
+                } else {
+                    try {
+                        const apiUrl = `/api/v1/apps/execute/${this.appId}`;
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                        return await response.json();
+                    } catch (e) {
+                        console.error("Bridge Error:", e);
+                        return { status: "error", message: e.message };
+                    }
+                }
+            }
+        }
+
+        const bridge = new FloworkBridge();
+        let currentBrowserPath = "";
+
+        // --- FILE BROWSER LOGIC (FIXED) ---
+        function openModal() { document.getElementById('folderModal').style.display = 'block'; }
+        function closeModal() { document.getElementById('folderModal').style.display = 'none'; }
+
+        async function loadDirectory(path) {
+            const listEl = document.getElementById('folderList');
+            const pathEl = document.getElementById('currentPathDisplay');
+            listEl.innerHTML = '<div class="p-4 text-center text-indigo-400 animate-pulse">Scanning...</div>';
+
+            try {
+                // FIX: Pastikan path tidak undefined
+                const targetPath = path || "";
+                const response = await bridge.send('browse_directory', { path: targetPath });
+
+                // FIX: Cek status success dengan ketat
+                if (response && response.status === 'success') {
+                    // FIX: Ambil current_path dari response, fallback ke default kalau kosong
+                    currentBrowserPath = response.current_path || "Root";
+                    pathEl.innerText = currentBrowserPath;
+                    listEl.innerHTML = '';
+
+                    const parentDiv = document.createElement('div');
+                    parentDiv.className = 'folder-item text-yellow-500 font-bold';
+                    parentDiv.innerHTML = '<i class="mdi mdi-folder-upload"></i> .. (Parent)';
+                    parentDiv.onclick = () => loadDirectory(currentBrowserPath + "/..");
+                    listEl.appendChild(parentDiv);
+
+                    // FIX: Cek apakah data array valid
+                    if (Array.isArray(response.data)) {
+                        if (response.data.length === 0) {
+                            listEl.innerHTML += '<div class="p-4 text-center text-gray-500">Folder Empty</div>';
+                        } else {
+                            response.data.forEach(item => {
+                                if (item.type === 'folder') {
+                                    const div = document.createElement('div');
+                                    div.className = 'folder-item';
+                                    div.innerHTML = `<i class="mdi mdi-folder text-indigo-400"></i> ${item.name}`;
+                                    div.onclick = () => loadDirectory(item.path);
+                                    listEl.appendChild(div);
+                                }
+                            });
+                        }
+                    } else {
+                        listEl.innerHTML = '<div class="p-4 text-center text-red-400">Invalid Data Format</div>';
+                    }
+                } else {
+                    listEl.innerHTML = `<div class="p-4 text-center text-red-400">${response.message || 'Unknown Error'}</div>`;
+                }
+            } catch (e) {
+                listEl.innerHTML = `<div class="p-4 text-center text-red-400">Bridge Error: ${e}</div>`;
+            }
+        }
+
+        function selectCurrentFolder() {
+            window.dispatchEvent(new CustomEvent('folder-selected', { detail: currentBrowserPath }));
+            closeModal();
+        }
+
+        // --- VUE APP ---
+        createApp({
+            setup() {
+                const modelSource = ref('hf');
+                const localModels = ref([]);
+                const config = ref({ model_name: '', epochs: 5, learning_rate: 0.001, dataset_path: '' });
+                const status = ref({ is_training: false, status: 'IDLE', current_epoch: 0, total_epochs: 0, current_loss: 0, logs: [] });
+                const isConnected = ref(false);
+                const envType = ref(bridge.mode === 'desktop' ? 'DESKTOP APP' : 'CLOUD DOCKER');
+                const logContainer = ref(null);
+                let chartInstance = null;
+
+                window.addEventListener('folder-selected', (e) => config.value.dataset_path = e.detail);
+
+                const openBrowser = () => {
+                    openModal();
+                    loadDirectory(config.value.dataset_path || "");
+                };
+
+                const refreshModels = async () => {
+                    try {
+                        const res = await bridge.send('get_local_models');
+                        if (res.status === 'success') {
+                            localModels.value = res.models;
+                            isConnected.value = true;
+                        }
+                    } catch(e) {
+                        console.error(e);
+                        isConnected.value = false;
+                    }
+                };
+
+                const startTraining = async () => {
+                    if (!config.value.model_name) return alert("Select a model first!");
+                    const res = await bridge.send('start_training', { config: JSON.parse(JSON.stringify(config.value)) });
+                    if(res.status === 'error') alert("Error: " + res.message);
+                };
+
+                const stopTraining = async () => {
+                    await bridge.send('stop_training');
+                };
+
+                const checkStatus = async () => {
+                    try {
+                        const res = await bridge.send('get_status');
+                        if (res) {
+                            status.value = res;
+                            isConnected.value = true;
+                            updateChart(res.loss_history);
+                            if(logContainer.value) logContainer.value.scrollTop = logContainer.value.scrollHeight;
+                        }
+                    } catch(e) {
+                        console.log("Heartbeat failed");
+                        isConnected.value = false;
+                    }
+                };
+
+                const updateChart = (data) => {
+                    if (chartInstance && data) {
+                        chartInstance.data.labels = data.map((_, i) => i);
+                        chartInstance.data.datasets[0].data = data;
+                        chartInstance.update();
+                    }
+                };
+
+                const statusClass = computed(() => {
+                    const s = status.value.status.toLowerCase();
+                    if (s === 'training') return 'bg-amber-500/20 text-amber-400 border-amber-500/50 animate-pulse';
+                    if (s === 'completed') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50';
+                    return 'bg-slate-800 text-slate-400 border-slate-700';
+                });
+
+                const getColor = (lvl) => {
+                    if(lvl === 'error') return 'text-red-400';
+                    if(lvl === 'success') return 'text-emerald-400';
+                    return 'text-slate-300';
+                }
+
+                onMounted(() => {
+                    const ctx = document.getElementById('lossChart').getContext('2d');
+                    chartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: { labels: [], datasets: [{ label: 'Loss', data: [], borderColor: '#6366f1', borderWidth: 2, pointRadius: 0, tension: 0.4 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#334155' } } }, animation: false }
+                    });
+
+                    refreshModels();
+                    setInterval(checkStatus, 1500);
+                });
+
+                return { modelSource, localModels, config, status, openBrowser, startTraining, stopTraining, statusClass, getColor, logContainer, refreshModels, isConnected, envType };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

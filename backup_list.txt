@@ -1,0 +1,13 @@
+C:\FLOWORK\flowork-core\flowork_kernel\services\variable_manager_service\__init__.py
+C:\FLOWORK\flowork-core\flowork_kernel\services\variable_manager_service\__init__.py
+C:\FLOWORK\flowork-gateway/app/sockets/__init__.py
+C:\FLOWORK\flowork_gateway/app/routes/api_routes.py
+C:\FLOWORK\flowork-core\flowork_kernel\services\gateway_connector_service\handlers\data_handler\__init__.py
+C:\FLOWORK\flowork-core/flowork_kernel/services/variable_manager_service/autodiscover_and_sync_variables.py
+C:\FLOWORK\flowork-core/flowork_kernel/services/variable_manager_service/set_variable.py
+C:\FLOWORK\flowork-core/flowork_kernel/security/env_guard.py
+C:\FLOWORK\flowork-core/flowork_kernel/services/app_manager_service/ensure_app_running.py
+C:\FLOWORK\flowork-core/flowork_kernel/services/app_manager_service/start.py
+C:\FLOWORK\flowork-core/flowork_kernel/services/app_runtime_service/execute_app.py
+C:\FLOWORK\flowork-core/app/executor/runner.py
+C:\FLOWORK\flowork-core/flowork_kernel/flow_sdk/base_app_node.py
