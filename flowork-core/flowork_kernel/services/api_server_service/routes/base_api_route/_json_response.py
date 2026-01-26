@@ -1,0 +1,15 @@
+########################################################################
+# WEBSITE https://flowork.cloud
+# File NAME : C:\FLOWORK\flowork-core\flowork_kernel\services\api_server_service\routes\base_api_route\_json_response.py total lines 12 
+##1. Dynamic Component Discovery (DCD): Hub wajib melakukan scanning file secara otomatis.
+##2. Lazy Loading: Modul hanya di-import ke RAM saat dipanggil (On-Demand).
+##3. Atomic Isolation: 1 File = 1 Fungsi dengan nama file yang identik dengan nama fungsi aslinya.
+##4. Zero Logic Mutation: Dilarang merubah alur logika, nama variabel, atau struktur if/try/loop.
+########################################################################
+
+from abc import ABC, abstractmethod
+from aiohttp import web
+
+
+def run(hub, data, status=200, headers=None):
+    return web.json_response(data, status=status, headers=headers)

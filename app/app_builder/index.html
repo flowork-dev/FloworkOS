@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flowork Studio | Evolution Engine v6.6</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; font-family: 'Inter', sans-serif; color: #f8fafc; }
+        .editor-bg { background-color: #020617; }
+        .sidebar { background-color: #1e293b; border-right: 1px solid #334155; }
+        .terminal { background-color: #000000; border-top: 1px solid #334155; }
+        .custom-input { background: #0f172a !important; border: 1px solid #334155 !important; color: #f8fafc !important; }
+        .custom-input:focus { border-color: #6366f1 !important; outline: none; }
+        .accent-btn { background: #6366f1; transition: all 0.2s; }
+        .accent-btn:hover:not(:disabled) { background: #4f46e5; transform: translateY(-1px); }
+        .accent-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex flex-col">
+
+    <header class="h-14 border-b border-slate-700 bg-slate-900 px-6 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-xs shadow-lg">FL</div>
+            <h1 class="text-sm font-bold tracking-tight uppercase italic">Flowork <span class="text-indigo-400">Studio</span></h1>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+            <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+            <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Neural Link Active</span>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <aside class="sidebar w-80 p-6 flex flex-col gap-8 shrink-0 overflow-y-auto">
+            <div class="space-y-6">
+                <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Deployment Config</h2>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase">Application ID</label>
+                    <input id="app-id" type="text" placeholder="e.g. ai_researcher"
+                           class="custom-input w-full p-3 rounded-lg text-sm font-semibold">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase">Intelligence Model</label>
+                    <select id="model-select" class="custom-input w-full p-3 rounded-lg text-sm cursor-pointer">
+                        <option value="gpt-4o">GPT-4o (Architect)</option>
+                        <option value="deepseek-chat">DeepSeek V3 (Logic)</option>
+                        <option value="gemini-2.0-flash-exp">Gemini 2.0 (Speed)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="space-y-4 pt-6 border-t border-slate-700/50">
+                <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Evolution Command</h2>
+                <div class="space-y-2">
+                    <textarea id="ai-prompt" rows="5" placeholder="Describe your mission..."
+                              class="custom-input w-full p-3 rounded-lg text-xs resize-none leading-relaxed"></textarea>
+                </div>
+                <button onclick="askAI()" id="ai-btn" class="border border-indigo-500/50 text-indigo-400 w-full py-2 rounded-lg font-bold text-[9px] uppercase tracking-widest hover:bg-indigo-500/10 transition-all">
+                    Preview Logic
+                </button>
+                <button onclick="startFullEvolution()" id="chain-btn" class="accent-btn w-full py-4 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20">
+                    🚀 Start Full Evolution Chain
+                </button>
+            </div>
+
+            <div id="fix-zone" class="hidden p-5 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Self-Healing</span>
+                    <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></div>
+                </div>
+                <button onclick="autoFix()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold text-[9px] uppercase transition-all shadow-lg shadow-emerald-500/20">
+                    Initiate Enforcer Fix
+                </button>
+            </div>
+
+            <div class="mt-auto pt-6">
+                <button onclick="startBuild()" id="build-btn" class="w-full py-4 bg-white text-slate-900 hover:bg-indigo-500 hover:text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all">
+                    Construct App
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col overflow-hidden editor-bg">
+            <div class="px-6 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Live Synthesis:</span>
+                    <span id="file-path" class="text-[10px] font-medium text-slate-400 font-mono">Ready...</span>
+                </div>
+            </div>
+
+            <div class="flex-1 relative overflow-hidden">
+                <textarea id="app-desc" spellcheck="false"
+                          class="absolute inset-0 w-full h-full bg-transparent p-10 outline-none text-emerald-400 font-mono text-xs leading-relaxed resize-none"
+                          placeholder="# Standing by for incremental evolution..."></textarea>
+            </div>
+
+            <footer class="h-48 terminal flex flex-col shrink-0">
+                <div class="px-4 py-2 border-b border-slate-800 flex items-center justify-between bg-white/5">
+                    <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Evolution Logs</span>
+                    <button onclick="document.getElementById('log-display').innerHTML=''" class="text-[8px] text-slate-600 hover:text-white font-bold uppercase">Clear</button>
+                </div>
+                <div id="log-display" class="flex-1 overflow-y-auto p-4 font-mono text-[10px] space-y-1">
+                    <p class="text-indigo-500">> [SYSTEM] Flowork Evolution Engine v6.6 Online.</p>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        const log = (msg, type = 'info') => {
+            const colors = { info: 'text-slate-500', success: 'text-emerald-400', error: 'text-red-500 font-bold', evolution: 'text-indigo-400 font-bold' };
+            const div = document.getElementById('log-display');
+            div.innerHTML += `<p class="${colors[type] || colors.info}">> [${new Date().toLocaleTimeString()}] ${msg}</p>`;
+            div.scrollTop = div.scrollHeight;
+        };
+
+        async function startFullEvolution() {
+            const appId = document.getElementById('app-id').value.trim();
+            const prompt = document.getElementById('ai-prompt').value.trim();
+            const model = document.getElementById('model-select').value;
+            const chainBtn = document.getElementById('chain-btn');
+
+            if(!appId || !prompt) return alert("Fill ID and Evolution Command.");
+
+            // [STRICT SEQUENCE V6.6] Urutan "Inside-Out" Terintegrasi
+            const steps = [
+                'main_logic_py',    // 1. Otak
+                'app_service_py',   // 2. Protektor
+                'app_router_py',    // 3. Jalur Saraf
+                'main_py',          // 4. Jantung (VESSEL - Tidak boleh kosong!)
+                'config_schema',    // 5. Energi
+                'manifest',         // 6. Identitas
+                'icon_svg',         // 7. Wajah Visual
+                'index_html',       // 8. Kulit UI (Menyerap semua konteks fetch)
+                'requirements_txt'  // 9. Amunisi Library
+            ];
+
+            chainBtn.disabled = true;
+            log(`INITIATING EVOLUTION: ${appId}`, 'evolution');
+            document.getElementById('fix-zone').classList.add('hidden'); // Sembunyikan tombol fix saat mulai
+
+            let hasError = false;
+
+            for (let step of steps) {
+                log(`PHASE: Architecting ${step}...`, 'info');
+                document.getElementById('file-path').innerText = `Synthesizing: ${step}`;
+                try {
+                    const res = await fetch('/api/v1/apps/execute/app_builder/ask_ai', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ app_id: appId, prompt: prompt, model: model, step: step })
+                    });
+                    const result = await res.json();
+
+                    if (result.status === 'success' && result.app_bundle) {
+                        const content = result.app_bundle[step];
+                        document.getElementById('app-desc').value = (typeof content === 'object') ? JSON.stringify(content, null, 4) : content;
+
+                        await fetch('/api/v1/apps/execute/app_builder/build_app', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ app_id: appId, bundle: result.app_bundle })
+                        });
+                        log(`DONE: ${step} integrated.`, 'success');
+                    } else {
+                        log(`REJECTED at ${step}: ${result.message}`, 'error');
+                        hasError = true;
+                        break;
+                    }
+                } catch (e) {
+                    log(`CRITICAL FAIL: ${e.message}`, 'error');
+                    hasError = true;
+                    break;
+                }
+            }
+
+            if (!hasError) {
+                log("EVOLUTION CHAIN COMPLETE.", "success");
+            } else {
+                // Munculkan tombol Fix jika ada error
+                document.getElementById('fix-zone').classList.remove('hidden');
+            }
+            chainBtn.disabled = false;
+        }
+
+        async function startBuild() { startFullEvolution(); }
+
+        async function autoFix() {
+            log("ENFORCER: Forcing AI to fix placeholders and logic errors (FULL REBUILD)...", "evolution");
+
+            // Tambahkan instruksi paksaan ke prompt agar AI sadar
+            const currentPrompt = document.getElementById('ai-prompt').value;
+            if (!currentPrompt.includes("CRITICAL FIX")) {
+                document.getElementById('ai-prompt').value += "\n\nCRITICAL FIX: Ensure main.py is a real entry point and index_html uses real fetch logic. No dummy data.";
+            }
+
+            // Re-run Full Evolution (No Specific Target to ensure consistency)
+            startFullEvolution();
+        }
+
+        async function askAI() {
+            const prompt = document.getElementById('ai-prompt').value.trim();
+            const model = document.getElementById('model-select').value;
+            const appId = document.getElementById('app-id').value.trim();
+            if(!prompt || !appId) return alert("ID & Prompt required.");
+
+            log(`PREVIEW: Checking logic for ${model}...`, 'info');
+            const res = await fetch('/api/v1/apps/execute/app_builder/ask_ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt, model: model, app_id: appId, step: 'main_logic_py' })
+            });
+            const result = await res.json();
+            if(result.status === 'success') {
+                document.getElementById('app-desc').value = result.app_bundle.main_logic_py;
+                log("PREVIEW: Real logic synthesized.", "success");
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+########################################################################
+# WEBSITE https://flowork.cloud
+# File NAME : C:\FLOWORK\docker-compose.yml total lines 131 
+##1. Dynamic Component Discovery (DCD): Hub wajib melakukan scanning file secara otomatis.
+##2. Lazy Loading: Modul hanya di-import ke RAM saat dipanggil (On-Demand).
+##3. Atomic Isolation: 1 File = 1 Fungsi dengan nama file yang identik dengan nama fungsi aslinya.
+##4. Zero Logic Mutation: Dilarang merubah alur logika, nama variabel, atau struktur if/try/loop.
+########################################################################
+
+name: flowork
+
+networks:
+  flowork-net:
+    driver: bridge
+
+services:
+  flowork_gateway:
+    image: flowork/gateway:dev
+    container_name: flowork_gateway
+    init: true
+    build:
+      context: ./flowork-gateway
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - APPS_DIRECTORY=/flowork_apps
+    entrypoint: ["/bin/bash", "-c", "dos2unix /app/entrypoint.sh && dos2unix seed_dev_engine.py && /app/entrypoint.sh && sleep 5 && echo '[Flowork] Seeding default engine...' && python seed_dev_engine.py"]
+    volumes:
+      - ./flowork-gateway:/app
+      - ./data:/app/data
+      - ./healthchecks:/app/healthchecks
+      - ./.env:/app/.env
+      - ./app:/flowork_apps
+      - ./data/logs:/app/logs
+    ports:
+      - "${GW_PORT:-8000}:8000"
+    networks:
+      flowork-net:
+        aliases:
+          - gateway
+    healthcheck:
+      test: ["CMD-SHELL", "python /app/healthchecks/health_gateway.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  flowork_core:
+    image: flowork/core:dev
+    container_name: flowork_core
+    shm_size: '10gb'
+    init: true
+    build:
+      context: ./flowork-core
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+      - PIP_CACHE_DIR=/app/data/.pip_cache
+      - FLOWORK_APPS_DIR=/app/flowork_apps
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ./flowork-core:/app
+      - ./app:/app/flowork_apps
+      - ./data:/app/data
+      - ./data/global_libs:/app/data/global_libs
+      - ./training:/app/training
+      - ./.env:/app/.env
+      - ./ai_providers:/app/flowork_kernel/ai_providers
+      - ./ai_models:/app/flowork_kernel/ai_models
+      - ./formatters:/app/flowork_kernel/formatters
+      - ./scanners:/app/flowork_kernel/scanners
+      - ./assets:/app/flowork_kernel/assets
+      - "${USERPROFILE}/Videos:/mnt/videos"
+      - .:/master_workspace
+    ports:
+      - "${CORE_PORT_TCP:-8989}:8989"
+      - "${CORE_PORT_HTTP:-8990}:8990"
+      - "${CORE_PORT_SOCKET:-5001}:5001"
+    networks:
+      flowork-net:
+        aliases:
+          - flowork_core
+          - core
+    depends_on:
+      flowork_gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python /app/healthchecks/health_core.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  flowork_cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: flowork_cloudflared
+    restart: unless-stopped
+    networks:
+      - flowork-net
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    depends_on:
+      flowork_gateway:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"

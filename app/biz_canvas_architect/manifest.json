@@ -1,0 +1,32 @@
+{
+  "id": "biz_canvas_architect",
+  "name": "The Iron Canvas",
+  "version": "1.0.0",
+  "description": "Simulasi Rapat Direksi AI untuk menyusun Business Model Canvas (BMC) yang brutal dan out-of-the-box.",
+  "category": "productivity",
+  "type": "apps",
+  "author": "Flowork User",
+  "tier": "architect",
+  "entry_point": "main.py",
+  "runtime": "python",
+  "permissions": [
+    "internet.access",
+    "filesystem.read",
+    "filesystem.write"
+  ],
+  "gui": {
+    "enabled": true,
+    "dashboard_path": "index.html",
+    "icon": "mdi-checkerboard"
+  },
+  "ui_config": {
+    "window_width": 1280,
+    "window_height": 900,
+    "resizable": true
+  },
+  "capabilities": [
+    "ai_reasoning",
+    "canvas_generation"
+  ],
+  "tags": ["business", "strategy", "ai"]
+}

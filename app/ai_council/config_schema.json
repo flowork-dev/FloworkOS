@@ -1,0 +1,25 @@
+{
+    "variables": [
+        {
+            "key": "OPENAI_API_KEY",
+            "label": "OpenAI API Key",
+            "type": "password",
+            "required": true,
+            "description": "Used by The Author (ChatGPT)"
+        },
+        {
+            "key": "GEMINI_API_KEY",
+            "label": "Google Gemini API Key",
+            "type": "password",
+            "required": true,
+            "description": "Used by The Analyst (Gemini Pro/Flash)"
+        },
+        {
+            "key": "DEEPSEEK_API_KEY",
+            "label": "DeepSeek API Key",
+            "type": "password",
+            "required": false,
+            "description": "Used by The Strategist. (Optional: Fallback to Gemini if missing)"
+        }
+    ]
+}

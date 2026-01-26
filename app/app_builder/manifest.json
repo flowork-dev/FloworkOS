@@ -1,0 +1,27 @@
+{
+    "id": "app_builder",
+    "name": "Flowork App Builder",
+    "version": "2.4.0",
+    "description": "Enterprise scaffolding engine to generate atomic applications.",
+    "category": "System Tools",
+    "type": "apps",
+    "author": "Commander",
+    "entry_point": "main.py",
+    "runtime": "python",
+    "permissions": [
+        "internet.access",
+        "filesystem.read",
+        "filesystem.write"
+    ],
+    "gui": {
+        "enabled": true,
+        "dashboard_path": "index.html",
+        "icon": "mdi-hammer-wrench"
+    },
+    "backend_config": {
+        "root": "backend",
+        "router": "app_router.py",
+        "service": "app_service.py",
+        "logic_dir": "logic"
+    }
+}

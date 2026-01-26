@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI COUNCIL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        /* GEMINI DARK THEME PALETTE */
+        :root {
+            --bg-body: #09090b;
+            --bg-sidebar: #121214;
+            --bg-surface: #1E1E20;
+            --text-primary: #E3E3E3;
+            --text-secondary: #A8C7FA;
+            --accent-gemini: #3b82f6;
+            --accent-deepseek: #a855f7;
+            --accent-gpt: #10b981;
+            --accent-judge: #f59e0b;
+            /* ADDED: Variable buat Zoom Text AI Only */
+            --ai-text-zoom: 100%;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            background-image: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+        }
+
+        /* CUSTOM SCROLLBAR */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* TYPING ANIMATION CURSOR */
+        .typing-cursor::after {
+            content: '▋';
+            color: #A8C7FA;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+            font-size: 0.8em;
+            display: inline-block;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* ANIMATION FOR NEW MESSAGES (Slide Up & Fade) */
+        @keyframes slideInUp { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .msg-card-enter { animation: slideInUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+        /* SIDEBAR HISTORY ITEMS */
+        .history-item {
+            position: relative;
+            border-radius: 12px;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .history-item:hover { background-color: rgba(255,255,255,0.03); border-color: #333; }
+        .history-item.active { background: linear-gradient(90deg, rgba(59, 130, 246, 0.1), transparent); border-left: 3px solid #3b82f6; color: #fff; }
+
+        /* DROPDOWN MENU */
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 10px;
+            top: 35px;
+            background: #1E1E20;
+            border: 1px solid #333;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            z-index: 50;
+            min-width: 150px;
+            overflow: hidden;
+        }
+        .dropdown-menu.show { display: block; animation: slideInUp 0.2s ease-out; }
+        .dropdown-item {
+            padding: 10px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #ccc;
+            transition: 0.2s;
+        }
+        .dropdown-item:hover { background: #2A2A2D; color: #fff; }
+        .dropdown-item.delete:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+        /* MARKDOWN STYLING */
+        .prose strong { color: #fff; font-weight: 700; }
+        .prose em { color: #ccc; font-style: italic; }
+        .prose h1, .prose h2, .prose h3 { color: #A8C7FA; margin-top: 15px; margin-bottom: 8px; font-weight: 700; letter-spacing: -0.02em; }
+        .prose ul { list-style-type: disc; padding-left: 20px; color: #ccc; margin-bottom: 10px; }
+        .prose ol { list-style-type: decimal; padding-left: 20px; color: #ccc; margin-bottom: 10px; }
+        .prose p { margin-bottom: 0.8em; line-height: 1.7; }
+        .prose code { background: rgba(0,0,0,0.3); padding: 2px 5px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.85em; color: #fbbf24; }
+        .prose pre { background: #111; padding: 15px; border-radius: 8px; border: 1px solid #333; overflow-x: auto; margin: 10px 0; }
+        .prose blockquote { border-left: 3px solid #555; padding-left: 15px; color: #999; font-style: italic; background: rgba(255,255,255,0.02); padding-top: 5px; padding-bottom: 5px; border-radius: 0 8px 8px 0; }
+
+        /* ADDED: INI DIA FITUR ZOOMNYA - Override Prose Font Size */
+        .prose {
+            font-size: var(--ai-text-zoom) !important;
+            /* Pastikan wrap kebawah bukan kesamping */
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+        }
+        /* Biar code block juga ngikutin zoom tapi tetep scrollable horizontal kalau kepanjangan */
+        .prose pre code {
+            font-size: 0.9em; /* relative to parent */
+        }
+        /* ADDED: Styling khusus Slider */
+        .zoom-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: #333;
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: .2s;
+        }
+        .zoom-slider:hover { opacity: 1; }
+        .zoom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(59,130,246,0.5);
+        }
+
+        /* DIALOGUE HIGHLIGHTER */
+        .dialogue-highlight {
+            color: #FCD34D;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95em;
+            background: rgba(252, 211, 77, 0.1);
+            padding: 0 4px;
+            border-radius: 4px;
+            border: 1px dashed rgba(252, 211, 77, 0.3);
+        }
+
+        /* NEW: TOAST NOTIFICATIONS */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            background: rgba(30, 30, 32, 0.95);
+            backdrop-filter: blur(10px);
+            border-left: 4px solid #3b82f6;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            transform: translateX(100%);
+            animation: slideInRight 0.3s forwards;
+            font-size: 13px;
+        }
+        .toast.success { border-color: #10b981; }
+        .toast.error { border-color: #ef4444; }
+        .toast.info { border-color: #3b82f6; }
+        @keyframes slideInRight { to { transform: translateX(0); } }
+        @keyframes fadeOutRight { to { opacity: 0; transform: translateX(100%); } }
+
+        /* CUSTOM MODAL OVERLAY */
+        .modal-overlay {
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        /* --- UPDATED: SPECIAL NEON THEMES FOR JUDGE & VERDICT (VERSI BARU LEBIH MENONJOL) --- */
+        .judge-theme {
+            background: linear-gradient(180deg, #1a1a1a 0%, #2d1b00 100%) !important; /* Latar gelap coklat emas */
+            border: 2px solid #f59e0b !important; /* Border Emas Tebal */
+            box-shadow: 0 0 25px rgba(245, 158, 11, 0.3) !important; /* Glow Effect */
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Putusan Final: Sangat Menonjol */
+        .verdict-theme {
+            background: #000000 !important; /* Hitam pekat agar teks nyala */
+            border: 3px double #FFD700 !important; /* Border Ganda Emas */
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.5) !important; /* Super Glow */
+            animation: pulse-border 3s infinite;
+        }
+
+        @keyframes pulse-border {
+            0% { border-color: #b45309; box-shadow: 0 0 20px rgba(180, 83, 9, 0.4); }
+            50% { border-color: #fbbf24; box-shadow: 0 0 50px rgba(251, 191, 36, 0.6); }
+            100% { border-color: #b45309; box-shadow: 0 0 20px rgba(180, 83, 9, 0.4); }
+        }
+
+        /* Teks Nyala untuk Putusan Final */
+        .verdict-text {
+            color: #fbbf24;
+            text-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
+        }
+
+        .verdict-text strong, .verdict-text h1, .verdict-text h2, .verdict-text h3 {
+            color: #FEF3C7 !important;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 15px #f59e0b;
+        }
+
+    </style>
+</head>
+<body class="flex h-screen relative selection:bg-blue-500/30">
+
+    <div id="toast-container"></div>
+
+    <div id="confirmModal" class="fixed inset-0 z-[100] hidden items-center justify-center modal-overlay">
+        <div class="bg-[#1E1E20] border border-[#333] w-96 rounded-2xl shadow-2xl p-6 transform transition-all scale-95 opacity-0" id="confirmBox">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-red-900/30 flex items-center justify-center text-red-500">
+                    <i class="mdi mdi-alert-outline text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-200">Are you sure?</h3>
+            </div>
+            <p id="confirmMsg" class="text-gray-400 text-sm mb-6 leading-relaxed">This action cannot be undone.</p>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeConfirm(false)" class="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#333] transition-colors">Cancel</button>
+                <button id="confirmBtnAction" class="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-white font-medium shadow-lg transition-all">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="inputModal" class="fixed inset-0 z-[100] hidden items-center justify-center modal-overlay">
+        <div class="bg-[#1E1E20] border border-[#333] w-96 rounded-2xl shadow-2xl p-6 transform transition-all scale-95 opacity-0" id="inputBox">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-blue-900/30 flex items-center justify-center text-blue-500">
+                    <i class="mdi mdi-pencil-outline text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-200" id="inputTitle">Enter Value</h3>
+            </div>
+            <input type="text" id="modalInputField" class="w-full bg-[#121214] text-white border border-[#333] rounded-lg p-3 text-sm focus:border-blue-500 outline-none mb-6" placeholder="Type here..." autocomplete="off">
+            <div class="flex justify-end gap-3">
+                <button onclick="closeInputModal(null)" class="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#333] transition-colors">Cancel</button>
+                <button id="inputBtnAction" class="px-4 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-lg transition-all">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <aside id="sidebar" class="w-[280px] bg-[#121214] flex flex-col border-r border-[#222] transition-all duration-300 z-30 absolute md:relative transform -translate-x-full md:translate-x-0 h-full">
+        <div class="p-5 flex items-center justify-between border-b border-[#222]">
+            <button onclick="toggleSidebar()" class="md:hidden text-gray-400"><i class="mdi mdi-menu"></i></button>
+            <div class="flex items-center gap-3 text-gray-100 font-bold tracking-tight text-lg">
+                <div class="w-8 h-8 rounded bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
+                    <i class="mdi mdi-google-circles-extended text-white text-sm"></i>
+                </div>
+               FLOWORK.CLOUD <BR>  AI Council
+            </div>
+            <button onclick="toggleAgentPanel()" class="text-gray-500 hover:text-blue-400 transition-colors" title="Agent Configuration">
+                <i class="mdi mdi-tune text-xl"></i>
+            </button>
+        </div>
+
+        <div class="px-4 my-6">
+            <button onclick="hardReset()" class="w-full group flex items-center gap-3 px-4 py-3 bg-blue-600/10 hover:bg-blue-600/20 rounded-xl text-sm text-blue-400 border border-blue-600/20 hover:border-blue-500/50 transition-all shadow-lg shadow-blue-900/10">
+                <i class="mdi mdi-plus-circle-outline text-xl group-hover:scale-110 transition-transform"></i>
+                <span class="font-semibold">New Session</span>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-3 py-2">
+            <div class="px-3 py-2 text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-2 flex justify-between items-center">
+                <span>Archives</span>
+                <i class="mdi mdi-history"></i>
+            </div>
+            <div id="historyList" class="space-y-1 pb-10"></div>
+        </div>
+
+        <div class="px-5 py-4 border-t border-[#222]">
+            <div class="flex justify-between items-center text-[10px] font-bold text-gray-500 mb-3 tracking-widest uppercase">
+                <span class="flex items-center gap-2"><i class="mdi mdi-format-size"></i> Chat Text Size</span>
+                <span id="zoomDisplay" class="text-blue-400">100%</span>
+            </div>
+            <div class="flex items-center gap-3">
+                 <span class="text-[10px] text-gray-600">A</span>
+                 <input type="range" id="fontSlider" min="100" max="300" value="100" step="10"
+                        class="zoom-slider flex-1" oninput="changeFontSize(this.value)">
+                 <span class="text-sm text-gray-600 font-bold">A</span>
+            </div>
+        </div>
+
+        <div class="p-4 text-[10px] text-center text-gray-700 border-t border-[#222]">
+            <a href="https://flowork.cloud">FLOWORK ENGINE </a>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col relative h-full w-full bg-[#09090b]">
+        <div class="h-14 flex items-center px-4 md:hidden bg-[#121214] border-b border-[#222]">
+            <button onclick="toggleSidebar()" class="text-gray-300 mr-4"><i class="mdi mdi-menu text-2xl"></i></button>
+            <span class="font-bold text-gray-200">AI Council</span>
+        </div>
+
+        <div id="scrollWrapper" class="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
+            <div id="chatContainer" class="max-w-4xl mx-auto flex flex-col space-y-8 pb-80">
+                <div class="flex flex-col items-center justify-center mt-32 opacity-80 text-center animate-in fade-in zoom-in duration-700">
+                    <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 blur-[60px] absolute opacity-20 animate-pulse"></div>
+                    <div class="relative z-10 w-16 h-16 rounded-2xl bg-[#1E1E20] border border-[#333] flex items-center justify-center mb-6 shadow-2xl">
+                         <i class="mdi mdi-shimmer text-3xl text-blue-400"></i>
+                    </div>
+                   <div class="flex flex-col items-center justify-center mt-24 text-center animate-[slideInUp_0.7s_ease-out_forwards]">
+
+    <div class="absolute w-64 h-64 bg-blue-600/20 rounded-full blur-[100px] -z-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+
+    <h3 class="text-xs font-bold tracking-[0.3em] text-blue-500/80 mb-4 uppercase drop-shadow-sm">
+        Welcome To
+    </h3>
+
+    <h1 class="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 mb-6 drop-shadow-[0_0_25px_rgba(59,130,246,0.4)] tracking-tighter">
+        FLOWORK.CLOUD
+    </h1>
+
+    <h2 class="text-xl md:text-2xl font-light text-gray-300 mb-5 tracking-wide">
+        Ready to Convene?
+    </h2>
+
+    <p class="text-gray-500 text-sm max-w-md leading-relaxed mx-auto">
+        I assemble the finest AI agents to debate, analyze, and solve your problems.
+        <br>
+        <span class="inline-flex items-center gap-2 mt-4 px-3 py-1.5 rounded-full bg-[#1A1A1C] border border-blue-500/30 text-blue-400 text-[11px] font-medium shadow-[0_0_10px_rgba(59,130,246,0.1)] hover:bg-blue-500/10 transition-colors cursor-default">
+            <i class="mdi mdi-flash-circle text-yellow-400 animate-pulse"></i>
+            Multi-LLM Strategy Enabled
+        </span>
+    </p>
+
+</div>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-[#09090b] via-[#09090b] to-transparent pt-20 pb-8 px-4 z-20">
+            <div class="max-w-3xl mx-auto">
+                <div id="statusIndicator" class="hidden mb-4 flex justify-center">
+                    <div class="bg-[#121214] px-5 py-2 rounded-full border border-blue-900/30 flex items-center gap-3 shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                        </span>
+                        <span class="text-[10px] text-blue-200 uppercase tracking-widest font-bold">Council is Deliberating...</span>
+                    </div>
+                </div>
+
+                <div class="bg-[#1E1E20] rounded-[24px] border border-[#333] focus-within:border-gray-500 focus-within:bg-[#252528] transition-all relative shadow-2xl group">
+                    <div id="filePreview" class="hidden px-4 py-3 border-b border-[#333] flex items-center gap-3 bg-[#232325] rounded-t-[24px] mx-1 mt-1">
+                         <div class="w-8 h-8 bg-blue-900/20 rounded-lg flex items-center justify-center text-blue-400 border border-blue-500/20">
+                             <i class="mdi mdi-file-document-outline"></i>
+                         </div>
+                         <div class="flex-1 overflow-hidden">
+                             <span id="fileName" class="text-xs text-gray-300 truncate block font-medium">file.pdf</span>
+                             <span class="text-[10px] text-gray-500">Attached Context</span>
+                         </div>
+                         <button onclick="clearFile()" class="w-6 h-6 rounded-full hover:bg-[#333] text-gray-500 hover:text-red-400 transition-colors flex items-center justify-center"><i class="mdi mdi-close"></i></button>
+                    </div>
+
+                    <textarea id="topicInput" class="w-full bg-transparent text-gray-200 text-sm p-4 pl-6 outline-none resize-none font-sans placeholder-gray-600 leading-relaxed min-h-[60px] max-h-[200px]" rows="1" placeholder="Describe your problem or topic..." oninput="autoResize(this)"></textarea>
+
+                    <div class="flex justify-between items-center px-4 pb-3">
+                        <div class="flex gap-2">
+                            <button onclick="document.getElementById('fileInput').click()" class="p-2 rounded-full hover:bg-[#333] text-gray-400 hover:text-blue-400 transition-colors" title="Attach File">
+                                <i class="mdi mdi-paperclip text-lg"></i>
+                            </button>
+                            <input type="file" id="fileInput" class="hidden" accept="image/*, application/pdf, text/plain" onchange="handleFileSelect(this)">
+                        </div>
+                        <div class="flex gap-3">
+                            <button id="btnStop" onclick="stopMeeting()" class="hidden px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-full text-xs font-bold transition-all border border-red-500/20 flex items-center gap-2">
+                                <i class="mdi mdi-stop-circle-outline text-lg"></i> STOP
+                            </button>
+                            <button id="btnStart" onclick="startMeeting()" class="w-10 h-10 flex items-center justify-center bg-white text-black rounded-full hover:scale-105 hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                                <i class="mdi mdi-arrow-up text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-[10px] text-center text-gray-600 mt-4 opacity-60">
+                    AI can make mistakes. Use output as reference only.
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <aside id="agentPanel" class="w-[400px] bg-[#161618] border-l border-[#222] absolute right-0 h-full transform translate-x-full transition-transform duration-300 z-40 shadow-[-20px_0_50px_rgba(0,0,0,0.5)] flex flex-col backdrop-blur-sm">
+        <div class="p-6 border-b border-[#222] flex justify-between items-center bg-[#1A1A1C]">
+            <div>
+                <h2 class="text-gray-200 font-bold text-sm tracking-wide">Protocol Configuration</h2>
+                <p class="text-[10px] text-gray-500 mt-1">Manage Agents & System Prompts</p>
+            </div>
+            <button onclick="toggleAgentPanel()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#333] text-gray-400 hover:text-white transition-colors"><i class="mdi mdi-close"></i></button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-5 space-y-8">
+            <div>
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Council Members</h3>
+                <div id="agentList" class="space-y-3"></div>
+            </div>
+
+            <div class="border-t border-[#222] pt-6">
+                <h3 class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="mdi mdi-code-braces"></i> Core Logic
+                </h3>
+
+                <div class="space-y-4">
+                     <div class="group">
+                        <label class="text-[10px] text-gray-500 block mb-1 group-hover:text-gray-300 transition-colors">DEBATER MAIN LOGIC</label>
+                        <textarea id="sys_debater" class="w-full h-28 bg-[#09090b] text-gray-300 text-[10px] font-mono p-3 rounded-lg border border-[#333] focus:border-blue-500 outline-none resize-none placeholder-gray-700 transition-all"></textarea>
+                    </div>
+
+                    <div class="group">
+                        <label class="text-[10px] text-gray-500 block mb-1 group-hover:text-gray-300 transition-colors">CONSENSUS JUDGE</label>
+                        <textarea id="sys_consensus" class="w-full h-20 bg-[#09090b] text-gray-300 text-[10px] font-mono p-3 rounded-lg border border-[#333] focus:border-blue-500 outline-none resize-none placeholder-gray-700 transition-all"></textarea>
+                    </div>
+
+                    <div class="group">
+                        <label class="text-[10px] text-gray-500 block mb-1 group-hover:text-gray-300 transition-colors">FINAL VERDICT</label>
+                        <textarea id="sys_verdict" class="w-full h-28 bg-[#09090b] text-gray-300 text-[10px] font-mono p-3 rounded-lg border border-[#333] focus:border-blue-500 outline-none resize-none placeholder-gray-700 transition-all"></textarea>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center mt-6">
+                     <button onclick="resetSystemPrompts()" class="text-[10px] text-gray-500 underline hover:text-white transition-colors">Reset Default</button>
+                     <button onclick="saveSystemProtocols()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-lg flex items-center gap-2">
+                         <i class="mdi mdi-content-save-outline"></i> Save
+                     </button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="promptModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay p-4">
+        <div class="bg-[#1E1E20] border border-[#333] w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+            <div class="p-4 border-b border-[#333] bg-[#232325] rounded-t-2xl flex justify-between items-center">
+                <h3 class="text-gray-200 font-bold text-sm flex items-center gap-2">
+                    <i class="mdi mdi-robot-confused text-blue-400"></i> Edit Instructions
+                </h3>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-white"><i class="mdi mdi-close"></i></button>
+            </div>
+            <div class="p-6 flex-1 flex flex-col min-h-0">
+                <p class="text-xs text-gray-500 mb-2">Custom System Prompt (Overrides default):</p>
+                <textarea id="modalPromptInput" class="w-full flex-1 bg-[#09090b] text-[#A8C7FA] font-mono text-xs p-4 rounded-lg border border-[#333] focus:border-blue-500 outline-none resize-none leading-relaxed shadow-inner" spellcheck="false"></textarea>
+                <div class="flex justify-between items-center mt-6">
+                    <button onclick="resetPrompt()" class="text-xs text-gray-500 hover:text-white underline">Restore Default</button>
+                    <button onclick="savePrompt()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONSTANTS ---
+        const API = '/api/v1/apps/execute/ai_council';
+
+        // DEFAULTS
+        const DEFAULT_DEBATER = `Identitas: {agent_name} | Role: {agent_role}.\nINSTRUKSI SPESIFIK (PRIORITAS DARI USER): {custom_instruction}\n\nDATA USER:\nTopik: '{topic}'\n(Cek attachment jika ada).\n\nRIWAYAT DISKUSI:\n{context_history}\n\nTUGAS KOLABORATIF:\n1. TUJUAN ADALAH SOLUSI: Jangan debat kusir.\n2. JIKA JAWAB PERTAMA: Bedah masalah ke akar.\n3. JIKA MERESPON TEMAN: LENGKAPI (Complementary).\n   - Isi kekosongan, tambah data.\n   - KRITIK hanya jika teman SALAH FATAL.\n4. Bahasa: Indonesia Gaul (Loe/Gue) tapi Cerdas.\n5.   DILARANG KERAS pakai HTML Entities (&quot; dll). Pakai kutip biasa.\nOutput MAX 300 kata.\n6. JANGAN BERIKAN SOLUSI BIASA BISASA SAJA, KITA BUTUH IDE OF OUT THE BOX INI PENTING`;
+
+        const DEFAULT_CONSENSUS = `HAKIM AGUNG: {judge_name}.\nRiwayat Diskusi: {context_history}\nTUGAS: Cek apakah diskusi mencapai SOLUSI MATANG (Consensus)?\nSyarat Sepakat:\n1. Masalah User terjawab Solusi Konkret.\n2. Tidak ada pertentangan data fatal.\n3. PERINGATKAN MEREKA JIKA IDE YANG MEREKA BUAT BIASA BIASA SAJAA DAN TIDAK OUT OF THE BOX \nJika belum, jawab LANJUT.\nOUTPUT JSON: { "decision": "SEPAKAT" atau "LANJUT", "reason": "..." }`;
+
+        const DEFAULT_VERDICT = `HAKIM AGUNG: {judge_name}.\nDiskusi SELESAI.\nTopik User: {topic}\nRiwayat Lengkap: {context_history}\n\nTUGAS: Buat PUTUSAN FINAL (VERDICT).\nFormat Markdown:\n## 🏛️ PUTUSAN FINAL\n**1. KESIMPULAN UTAMA (Inti Masalah)**\n**2. ANALISIS DATA (Fakta & Bukti)**\n**3. RENCANA EKSEKUSI (Step-by-Step)**\n**4. TITAH HAKIM (Saran Akhir)**\nGunakan bahasa tegas, berwibawa, DAN RANGKUM SEMUA DISKUSI YANG IDENYA KITA TERIMA, PASTIKAN HARUS OF OUT THE BOX`;
+
+        let poller = null;
+        let msgCount = 0;
+        let currentJobId = null;
+        let agentsData = {};
+        let messageQueue = [];
+        let isProcessingQueue = false;
+
+        // Attachment
+        let currentFileBase64 = null;
+        let currentFileMime = null;
+        let currentFileName = null;
+
+        window.onload = function() {
+            fetchAgents();
+            loadHistoryList();
+            initSystemProtocols();
+            document.addEventListener('click', closeDropdowns);
+
+            // ADDED: Initialize Zoom Preference
+            const savedZoom = localStorage.getItem('ai_text_zoom') || 100;
+            changeFontSize(savedZoom);
+        };
+
+        // --- NEW: TOAST NOTIFICATION SYSTEM ---
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const div = document.createElement('div');
+            let icon = type === 'success' ? 'mdi-check-circle' : type === 'error' ? 'mdi-alert-circle' : 'mdi-information';
+            div.className = `toast ${type}`;
+            div.innerHTML = `<i class="mdi ${icon} text-lg"></i><span>${message}</span>`;
+            container.appendChild(div);
+            // Auto remove
+            setTimeout(() => {
+                div.style.animation = 'fadeOutRight 0.5s forwards';
+                setTimeout(() => div.remove(), 500);
+            }, 3000);
+        }
+
+        // --- ADDED: FONT SIZE LOGIC ---
+        function changeFontSize(val) {
+            // Update CSS Variable secara global
+            document.documentElement.style.setProperty('--ai-text-zoom', val + '%');
+            // Update angka tampilan
+            document.getElementById('zoomDisplay').innerText = val + '%';
+            // Update posisi slider biar sync kalau di-reload
+            document.getElementById('fontSlider').value = val;
+            // Simpan ke local storage
+            localStorage.setItem('ai_text_zoom', val);
+        }
+
+        // --- CUSTOM MODAL CONFIRM ---
+        let confirmCallback = null;
+        function customConfirm(msg, callback) {
+            document.getElementById('confirmMsg').innerText = msg;
+            document.getElementById('confirmModal').classList.remove('hidden');
+            document.getElementById('confirmModal').classList.add('flex');
+            // Slight delay for animation
+            setTimeout(() => {
+                document.getElementById('confirmBox').classList.remove('opacity-0', 'scale-95');
+                document.getElementById('confirmBox').classList.add('opacity-100', 'scale-100');
+            }, 10);
+            confirmCallback = callback;
+        }
+
+        document.getElementById('confirmBtnAction').onclick = () => {
+             closeConfirm(true);
+        };
+
+        function closeConfirm(result) {
+            const box = document.getElementById('confirmBox');
+            box.classList.remove('opacity-100', 'scale-100');
+            box.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => {
+                document.getElementById('confirmModal').classList.add('hidden');
+                document.getElementById('confirmModal').classList.remove('flex');
+                if(result && confirmCallback) confirmCallback();
+                confirmCallback = null;
+            }, 200);
+        }
+
+        // --- NEW: CUSTOM INPUT MODAL (For Rename) ---
+        let inputCallback = null;
+        function openInputModal(title, callback) {
+            document.getElementById('inputTitle').innerText = title;
+            document.getElementById('modalInputField').value = "";
+            document.getElementById('inputModal').classList.remove('hidden');
+            document.getElementById('inputModal').classList.add('flex');
+            // Animation
+            setTimeout(() => {
+                document.getElementById('inputBox').classList.remove('opacity-0', 'scale-95');
+                document.getElementById('inputBox').classList.add('opacity-100', 'scale-100');
+                document.getElementById('modalInputField').focus();
+            }, 10);
+            inputCallback = callback;
+        }
+
+        document.getElementById('inputBtnAction').onclick = () => {
+            const val = document.getElementById('modalInputField').value.trim();
+            if(val) closeInputModal(val);
+        };
+
+        function closeInputModal(result) {
+            const box = document.getElementById('inputBox');
+            box.classList.remove('opacity-100', 'scale-100');
+            box.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => {
+                document.getElementById('inputModal').classList.add('hidden');
+                document.getElementById('inputModal').classList.remove('flex');
+                if(result && inputCallback) inputCallback(result);
+                inputCallback = null;
+            }, 200);
+        }
+
+        // --- SYSTEM PROTOCOLS ---
+        function initSystemProtocols() {
+            document.getElementById('sys_debater').value = localStorage.getItem('sys_debater') || DEFAULT_DEBATER;
+            document.getElementById('sys_consensus').value = localStorage.getItem('sys_consensus') || DEFAULT_CONSENSUS;
+            document.getElementById('sys_verdict').value = localStorage.getItem('sys_verdict') || DEFAULT_VERDICT;
+        }
+
+        function saveSystemProtocols() {
+            localStorage.setItem('sys_debater', document.getElementById('sys_debater').value);
+            localStorage.setItem('sys_consensus', document.getElementById('sys_consensus').value);
+            localStorage.setItem('sys_verdict', document.getElementById('sys_verdict').value);
+            showToast("System Protocols Saved!", "success");
+        }
+
+        function resetSystemPrompts() {
+            customConfirm("Reset all system protocols to default?", () => {
+                document.getElementById('sys_debater').value = DEFAULT_DEBATER;
+                document.getElementById('sys_consensus').value = DEFAULT_CONSENSUS;
+                document.getElementById('sys_verdict').value = DEFAULT_VERDICT;
+                saveSystemProtocols();
+            });
+        }
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); }
+
+        // --- AGENT MANAGEMENT ---
+        async function fetchAgents() {
+            try {
+                const req = await fetch(`${API}/get_agents`, { method: 'POST', body: '{}' });
+                const res = await req.json();
+                if (res.status === 'success' && res.agents) {
+                    const listDiv = document.getElementById('agentList');
+                    listDiv.innerHTML = '';
+                    res.agents.forEach(agent => {
+                        if (!agentsData[agent.id]) {
+                            agentsData[agent.id] = { role: "DEBATER", defaultPrompt: agent.default_prompt, customPrompt: null };
+                        }
+                        const currentRole = agentsData[agent.id].role;
+                        const div = document.createElement('div');
+                        div.className = "bg-[#232325] rounded-xl p-3 border border-[#333] hover:border-[#555] transition-all group";
+                        div.innerHTML = `
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="w-10 h-10 rounded-lg bg-[#161618] flex items-center justify-center text-xl border border-[#333] shadow-inner">
+                                    <i class="mdi ${agent.profile.icon} ${agent.profile.color.replace('text-', 'text-opacity-90 text-')}"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-gray-200">${agent.profile.name}</div>
+                                    <div class="text-[10px] text-gray-500 tracking-wide">${agent.profile.role}</div>
+                                </div>
+                                <button onclick="openEditModal('${agent.id}')" class="w-7 h-7 rounded-full bg-[#161618] text-gray-500 hover:text-blue-400 hover:bg-[#333] transition-all flex items-center justify-center border border-[#333]" title="Edit">
+                                    <i class="mdi mdi-pencil-outline text-xs"></i>
+                                </button>
+                            </div>
+                            <select onchange="changeRole('${agent.id}', this)" class="w-full bg-[#161618] text-gray-400 text-[11px] p-2 rounded-lg border border-[#333] outline-none hover:border-gray-500 transition-colors cursor-pointer font-mono">
+                                <option value="DEBATER" ${currentRole === 'DEBATER' ? 'selected' : ''}>Active Debater</option>
+                                <option value="JUDGE" ${currentRole === 'JUDGE' ? 'selected' : ''}>Judge (Hakim)</option>
+                                <option value="MODERATOR" ${currentRole === 'MODERATOR' ? 'selected' : ''}>Moderator</option>
+                                <option value="OFF" ${currentRole === 'OFF' ? 'selected' : ''}>Inactive (Off)</option>
+                            </select>
+                        `;
+                        listDiv.appendChild(div);
+                    });
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function changeRole(id, selectElem) { agentsData[id].role = selectElem.value; }
+
+        // --- HISTORY MANAGEMENT ---
+        async function loadHistoryList() {
+            try {
+                const req = await fetch(`${API}/get_history`, { method: 'POST', body: '{}' });
+                const res = await req.json();
+                const container = document.getElementById('historyList');
+                container.innerHTML = '';
+
+                if (res.status === 'success' && res.history) {
+                    res.history.forEach(item => {
+                        const div = document.createElement('div');
+                        const isActive = currentJobId === item.job_id;
+                        div.className = `history-item group px-3 py-3 flex justify-between items-center cursor-pointer mb-1 ${isActive ? 'active' : ''}`;
+                        div.onclick = (e) => loadSpecificSession(item.job_id, div, e);
+
+                        div.innerHTML = `
+                            <div class="flex items-center gap-3 overflow-hidden flex-1">
+                                <i class="mdi mdi-message-text-outline text-xs opacity-50 group-hover:opacity-100 transition-opacity"></i>
+                                <div class="flex flex-col overflow-hidden">
+                                    <span class="text-xs truncate text-gray-300 font-medium">${item.title}</span>
+                                    <span class="text-[10px] text-gray-600 opacity-70">${new Date(item.date).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+                            <button onclick="toggleDropdown('${item.job_id}', event)" class="opacity-0 group-hover:opacity-100 hover:bg-gray-700/50 rounded-full w-6 h-6 flex items-center justify-center transition-all text-gray-400">
+                                <i class="mdi mdi-dots-vertical text-xs"></i>
+                            </button>
+                            <div id="dropdown-${item.job_id}" class="dropdown-menu">
+                                <div class="dropdown-item" onclick="renameSession('${item.job_id}', event)">
+                                    <i class="mdi mdi-pencil-outline"></i> Rename
+                                </div>
+                                <div class="dropdown-item delete" onclick="deleteSession('${item.job_id}', event)">
+                                    <i class="mdi mdi-delete-outline"></i> Delete
+                                </div>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    });
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // --- START & MEETING LOGIC ---
+        async function startMeeting() {
+            const inputField = document.getElementById('topicInput');
+            const topic = inputField.value.trim();
+            if(!topic && !currentFileBase64) return;
+
+            // Jika ini sesi lanjutan (context continuation), gunakan job_id yang sama
+            let targetJobId = currentJobId;
+
+            renderUserMessage(topic);
+
+            inputField.value = '';
+            inputField.style.height = 'auto';
+
+            toggleBtn(true);
+            document.getElementById('statusIndicator').classList.remove('hidden');
+            document.getElementById('btnStart').classList.add('hidden');
+            document.getElementById('btnStop').classList.remove('hidden');
+
+            const configPayload = {};
+            for (const [id, data] of Object.entries(agentsData)) {
+                configPayload[id] = { role: data.role, prompt: data.customPrompt };
+            }
+
+            const files = [];
+            if(currentFileBase64) {
+                files.push({ name: currentFileName, mime: currentFileMime, data: currentFileBase64 });
+                clearFile();
+            }
+
+            const sysPrompts = {
+                debater_main: document.getElementById('sys_debater').value,
+                consensus_logic: document.getElementById('sys_consensus').value,
+                final_verdict: document.getElementById('sys_verdict').value
+            };
+
+            try {
+                const req = await fetch(`${API}/start`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        topic: topic,
+                        job_id: targetJobId, // PASS NULL FOR NEW, OR ID FOR CONTINUE
+                        agent_config: configPayload,
+                        files: files,
+                        system_prompts: sysPrompts
+                    })
+                });
+                const res = await req.json();
+                if(res.status === 'success' && res.job_id) {
+                    currentJobId = res.job_id;
+                    if(!targetJobId) loadHistoryList(); // Refresh list if new
+                    startPolling();
+                } else { throw new Error("Start failed"); }
+            } catch(e) {
+                showToast(e.message, 'error');
+                resetBtn();
+            }
+        }
+
+        async function stopMeeting() {
+            if(!currentJobId) return;
+            await fetch(`${API}/execute`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: "stop_meeting",
+                    params: { job_id: currentJobId }
+                })
+            });
+            showToast("Meeting stopped by Commander", "info");
+            resetBtn();
+        }
+
+        function resetBtn() {
+            document.getElementById('btnStart').classList.remove('hidden');
+            document.getElementById('btnStop').classList.add('hidden');
+            document.getElementById('statusIndicator').classList.add('hidden');
+            toggleBtn(false);
+        }
+
+        function startPolling() {
+            if(!currentJobId) return;
+            if(poller) clearInterval(poller);
+
+            poller = setInterval(async () => {
+                try {
+                    const req = await fetch(`${API}/check`, { method: 'POST', body: JSON.stringify({job_id: currentJobId}) });
+                    const response = await req.json();
+
+                    if (response.status === 'success' && response.data) {
+                        const job = response.data;
+                        if(job.messages && job.messages.length > msgCount) {
+                            const newMsgs = job.messages.slice(msgCount);
+                            newMsgs.forEach(msg => {
+                                // IMPORTANT: Live messages get queued
+                                if (msgCount === 0 || msg.agent !== 'User') messageQueue.push(msg);
+                            });
+                            processQueue(); // Logic live typing
+                            msgCount = job.messages.length;
+                        }
+                        if(job.status !== 'running' && messageQueue.length === 0 && !isProcessingQueue) {
+                            resetBtn();
+                        }
+                    }
+                } catch(e) {}
+            }, 1000);
+        }
+
+        async function processQueue() {
+            if(isProcessingQueue || messageQueue.length === 0) return;
+            isProcessingQueue = true;
+            const msg = messageQueue.shift();
+            // Live message -> render with typing
+            await renderCard(msg, false);
+            isProcessingQueue = false;
+            processQueue();
+        }
+
+        // --- NEW: UTILS FOR DECODING HTML ENTITIES INSTANTLY ---
+        function decodeHtmlEntity(str) {
+            if (!str) return "";
+            // Replace common entities directly first to catch double encoding
+            let s = str.replace(/&quot;/g, '"')
+                       .replace(/&amp;quot;/g, '"')
+                       .replace(/&amp;/g, '&')
+                       .replace(/&lt;/g, '<')
+                       .replace(/&gt;/g, '>');
+            // Then use text area for any obscure ones
+            const txt = document.createElement("textarea");
+            txt.innerHTML = s;
+            return txt.value;
+        }
+
+        // --- RENDERING ---
+        function formatDialogue(text) {
+            let clean = cleanText(text); // Basic clean
+            // Apply highlighting
+            return clean.replace(/"([^"]*)"/g, '<span class="dialogue-highlight">"$1"</span>');
+        }
+
+        function renderCard(msg, isHistory = false) {
+            return new Promise((resolve) => {
+                const container = document.getElementById('chatContainer');
+
+                // USER MESSAGE
+                if(msg.agent === 'User') {
+                    const html = `
+                        <div class="flex justify-end w-full msg-card-enter mb-6">
+                             <div class="flex flex-col items-end max-w-[85%]">
+                                <div class="bg-[#2A2A2D] text-[#E3E3E3] p-4 rounded-2xl rounded-tr-none leading-relaxed text-sm whitespace-pre-wrap shadow-lg border border-[#333]">
+                                    ${cleanText(msg.content)}
+                                </div>
+                                <span class="text-[10px] text-gray-600 mt-1 mr-2 font-mono">COMMANDER</span>
+                            </div>
+                        </div>`;
+                    insertAndScroll(html);
+                    resolve(); return;
+                }
+
+                // AI MESSAGE
+                const isJudge = msg.role.includes("HAKIM") || msg.role.includes("Judge");
+                const isVerdict = msg.content.includes("PUTUSAN FINAL");
+                const contentId = `content-${Math.random().toString(36).substr(2, 9)}`;
+
+                // --- MODERN COLOR LOGIC ---
+                let bgClass = "bg-[#1E1E20] border-[#333]";
+                let accentColor = "text-gray-400";
+                let textClass = ""; // For special text effects
+
+                let lowerName = msg.agent.toLowerCase();
+                // Gemini (Blue/Cyan)
+                if (lowerName.includes("gemini")) {
+                    bgClass = "bg-blue-950/10 border-blue-500/20";
+                    accentColor = "text-blue-400";
+                }
+                // DeepSeek (Purple)
+                else if (lowerName.includes("deepseek")) {
+                    bgClass = "bg-purple-950/10 border-purple-500/20";
+                    accentColor = "text-purple-400";
+                }
+                // ChatGPT (Green)
+                else if (lowerName.includes("gpt")) {
+                    bgClass = "bg-green-950/10 border-green-500/20";
+                    accentColor = "text-green-400";
+                }
+                // --- UPDATED: SPECIAL NEON THEMES FOR JUDGE & VERDICT (VERSI BARU LEBIH MENONJOL) ---
+                else if (isJudge) {
+                    bgClass = "judge-theme"; accentColor = "text-yellow-500";
+                    if (isVerdict) { bgClass = "verdict-theme"; textClass = "verdict-text"; }
+                }
+                // Moderator (Teal)
+                else if (msg.role.includes("MODERATOR")) {
+                    bgClass = "bg-teal-950/10 border-teal-500/30";
+                    accentColor = "text-teal-400";
+                }
+                // INTERRUPT (Red)
+                else if (msg.role === "INTERRUPT") {
+                    bgClass = "bg-red-950/10 border-red-500/30";
+                    accentColor = "text-red-500";
+                }
+
+                const html = `
+                    <div class="flex gap-4 w-full justify-start mb-8 msg-card-enter">
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="w-9 h-9 rounded-xl bg-[#121214] border border-[#333] flex items-center justify-center flex-shrink-0 shadow-lg ${accentColor}">
+                                <i class="mdi ${msg.icon} text-lg"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1 max-w-[90%]">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-sm font-bold text-gray-200 tracking-wide">${msg.agent}</span>
+                                <span class="text-[9px] px-1.5 py-0.5 rounded bg-black/40 border border-white/5 text-gray-500 uppercase tracking-widest font-semibold">${msg.role}</span>
+                                <span class="text-[9px] text-gray-600 ml-auto font-mono">${msg.time || ''}</span>
+                            </div>
+                            <div class="relative group/card">
+                                <div class="p-5 rounded-2xl border ${bgClass} text-gray-300 text-sm leading-7 shadow-sm">
+                                    <div id="${contentId}" class="prose prose-invert max-w-none ${textClass} ${!isHistory ? 'typing-cursor' : ''} min-h-[20px]"></div>
+                                </div>
+                                <div class="absolute -bottom-7 left-2 flex gap-2 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
+                                    <button onclick="copyText('${contentId}')" class="text-gray-600 hover:text-white text-xs flex items-center gap-1 bg-[#1E1E20] px-2 py-1 rounded border border-[#333]">
+                                        <i class="mdi mdi-content-copy"></i> Copy
+                                    </button>
+                                    <button onclick="toggleLike(this, '${currentJobId}', ${document.querySelectorAll('.bg-blue-950\\/10').length})" class="text-gray-600 hover:text-pink-500 text-xs flex items-center gap-1 bg-[#1E1E20] px-2 py-1 rounded border border-[#333]">
+                                        <i class="mdi mdi-heart-outline"></i> Like
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+
+                insertAndScroll(html);
+
+                const targetElement = document.getElementById(contentId);
+                // Aggressively clean content before markdown processing
+                const safeContent = decodeHtmlEntity(msg.content);
+                const formattedContent = formatDialogue(safeContent);
+                let parsedHtml = marked.parse(formattedContent);
+
+                // FINAL SAFETY NET: Decode again after markdown to catch anything marked missed or escaped
+                parsedHtml = decodeHtmlEntity(parsedHtml);
+
+                if (isHistory) {
+                    // INSTANT RENDER
+                    targetElement.innerHTML = parsedHtml;
+                    resolve();
+                } else {
+                    // TYPING EFFECT
+                    typeWriterHTML(targetElement, parsedHtml, 8, resolve);
+                }
+            });
+        }
+
+        // --- UTILS: COPY & LIKE ---
+        function copyText(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast("Copied to clipboard", "success");
+            });
+        }
+
+        async function toggleLike(btn, jobId, index) {
+            // Visual toggle
+            const icon = btn.querySelector('i');
+            const isLiked = icon.classList.contains('mdi-heart');
+            if(isLiked) {
+                icon.classList.replace('mdi-heart', 'mdi-heart-outline');
+                btn.classList.remove('text-pink-500');
+            } else {
+                icon.classList.replace('mdi-heart-outline', 'mdi-heart');
+                icon.classList.add('text-pink-500');
+                btn.classList.add('text-pink-500');
+                showToast("Feedback sent to Council", "success");
+            }
+
+            await fetch(`${API}/execute`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: "like_message",
+                    params: { job_id: jobId, index: index } // Passing index needs robust mapping
+                })
+            });
+        }
+
+
+        // --- TYPEWRITER HTML ---
+        function typeWriterHTML(element, htmlContent, speed, onComplete) {
+            const tokens = htmlContent.split(/(<[^>]*>)/);
+            let tokenIndex = 0;
+
+            function processToken() {
+                if (tokenIndex < tokens.length) {
+                    const token = tokens[tokenIndex];
+
+                    if (token.startsWith('<')) {
+                        element.innerHTML += token;
+                        tokenIndex++;
+                        processToken();
+                    } else {
+                        // Decode again just in case splitting caused issues
+                        const decodedToken = decodeHtmlEntity(token);
+                        let charIndex = 0;
+                        function typeChar() {
+                            if (charIndex < decodedToken.length) {
+                                element.innerHTML += decodedToken.charAt(charIndex);
+                                charIndex++;
+                                scrollToBottom();
+                                setTimeout(typeChar, speed);
+                            } else {
+                                tokenIndex++;
+                                processToken();
+                            }
+                        }
+                        typeChar();
+                    }
+                } else {
+                    element.classList.remove("typing-cursor");
+                    if(onComplete) onComplete();
+                }
+            }
+            processToken();
+        }
+
+        function insertAndScroll(html) {
+            const container = document.getElementById('chatContainer');
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            container.appendChild(div.firstElementChild);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            const sw = document.getElementById('scrollWrapper');
+            sw.scrollTop = sw.scrollHeight;
+        }
+
+        function cleanText(text) {
+            if (!text) return "";
+            const txt = document.createElement("textarea");
+            txt.innerHTML = text;
+            return txt.value;
+        }
+
+        function renderUserMessage(text) {
+            const html = `
+                <div class="flex justify-end w-full msg-card-enter mb-6">
+                     <div class="flex flex-col items-end max-w-[85%]">
+                        <div class="bg-[#2A2A2D] text-[#E3E3E3] p-4 rounded-2xl rounded-tr-none leading-relaxed text-sm whitespace-pre-wrap shadow-lg border border-[#333]">
+                            ${cleanText(text)}
+                        </div>
+                        <span class="text-[10px] text-gray-600 mt-1 mr-2 font-mono">COMMANDER</span>
+                    </div>
+                </div>`;
+            insertAndScroll(html);
+        }
+
+        // --- FILE & SESSION UTILS ---
+        function handleFileSelect(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentFileMime = file.type;
+                currentFileBase64 = e.target.result.split(',')[1];
+                currentFileName = file.name;
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('filePreview').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+        function clearFile() {
+            currentFileBase64 = null;
+            document.getElementById('fileInput').value = "";
+            document.getElementById('filePreview').classList.add('hidden');
+        }
+
+        function toggleDropdown(jobId, event) {
+            event.stopPropagation();
+            closeDropdowns();
+            document.getElementById(`dropdown-${jobId}`).classList.toggle('show');
+        }
+        function closeDropdowns() { document.querySelectorAll('.dropdown-menu').forEach(el => el.classList.remove('show')); }
+
+        // --- MODIFIED: LOAD SESSION (With Context) ---
+        async function loadSpecificSession(jobId, el, event) {
+            if(event && (event.target.closest('.dropdown-menu') || event.target.closest('button'))) return;
+            currentJobId = jobId;
+            document.querySelectorAll('.history-item').forEach(d => d.classList.remove('active'));
+            if(el) el.classList.add('active');
+
+            messageQueue = []; isProcessingQueue = false;
+            document.getElementById('chatContainer').innerHTML = '';
+            msgCount = 0;
+            resetBtn();
+
+            // Fetch Immediately to show history instant
+            try {
+                const req = await fetch(`${API}/check`, { method: 'POST', body: JSON.stringify({job_id: currentJobId}) });
+                const response = await req.json();
+                if(response.status === 'success' && response.data.messages) {
+                    const msgs = response.data.messages;
+                    msgCount = msgs.length; // Set count
+                    // Render loop with isHistory = true (Instant)
+                    for(const m of msgs) {
+                       await renderCard(m, true);
+                    }
+                }
+                startPolling();
+            } catch(e) { console.error(e); }
+        }
+
+        async function renameSession(jobId, event) {
+            event.stopPropagation(); closeDropdowns();
+            openInputModal("Rename Session", async (newName) => {
+                 if (newName) {
+                    await fetch(`${API}/rename_history`, { method: 'POST', body: JSON.stringify({job_id: jobId, title: newName}) });
+                    loadHistoryList();
+                    showToast("Session renamed", "success");
+                }
+            });
+        }
+        async function deleteSession(jobId, event) {
+            event.stopPropagation(); closeDropdowns();
+            customConfirm("Delete this archived session permanently?", async () => {
+                await fetch(`${API}/delete_history`, { method: 'POST', body: JSON.stringify({job_id: jobId}) });
+                if(currentJobId === jobId) hardReset();
+                loadHistoryList();
+                showToast("Session deleted", "error");
+            });
+        }
+        function hardReset() {
+            if(poller) clearInterval(poller); poller = null;
+            currentJobId = null; msgCount = 0; messageQueue = []; isProcessingQueue = false;
+            document.getElementById('chatContainer').innerHTML = `
+                <div class="flex flex-col items-center justify-center mt-32 opacity-80 text-center animate-in fade-in zoom-in duration-700">
+                    <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 blur-[60px] absolute opacity-20 animate-pulse"></div>
+                    <div class="relative z-10 w-16 h-16 rounded-2xl bg-[#1E1E20] border border-[#333] flex items-center justify-center mb-6 shadow-2xl">
+                         <i class="mdi mdi-shimmer text-3xl text-blue-400"></i>
+                    </div>
+                    <h2 class="text-3xl font-light text-gray-200 mb-3 tracking-tight">Ready to Convene?</h2>
+                    <p class="text-gray-500 text-sm max-w-md leading-relaxed">
+                        I assemble the finest AI agents to debate, analyze, and solve your problems. <br>
+                        <span class="text-blue-500/60">Multi-LLM Strategy Enabled.</span>
+                    </p>
+                </div>`;
+            document.getElementById('topicInput').value = '';
+            document.querySelectorAll('.history-item').forEach(d => d.classList.remove('active'));
+            resetBtn();
+        }
+
+        // --- MODAL & UI ---
+        function toggleAgentPanel() { document.getElementById('agentPanel').classList.toggle('translate-x-full'); }
+        let editingAgentId = null;
+        function openEditModal(id) {
+            editingAgentId = id;
+            document.getElementById('modalPromptInput').value = agentsData[id].customPrompt || agentsData[id].defaultPrompt;
+            document.getElementById('promptModal').classList.remove('hidden');
+            document.getElementById('promptModal').classList.add('flex');
+        }
+        function closeModal() {
+            document.getElementById('promptModal').classList.add('hidden');
+            document.getElementById('promptModal').classList.remove('flex');
+            editingAgentId = null;
+        }
+        function resetPrompt() { if(editingAgentId) document.getElementById('modalPromptInput').value = agentsData[editingAgentId].defaultPrompt; }
+        function savePrompt() {
+            if(editingAgentId) {
+                const val = document.getElementById('modalPromptInput').value;
+                agentsData[editingAgentId].customPrompt = (val !== agentsData[editingAgentId].defaultPrompt) ? val : null;
+                showToast("Agent instructions updated", "success");
+                closeModal();
+            }
+        }
+        function toggleBtn(disabled) {
+            const btn = document.getElementById('btnStart');
+            btn.disabled = disabled;
+            btn.classList.toggle('opacity-50', disabled);
+        }
+    </script>
+</body>
+</html>

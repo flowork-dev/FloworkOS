@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Researcher Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0f172a; /* slate-950 */
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="flex">
+        <aside class="w-64 bg-slate-900/80 p-6">
+            <h1 class="text-indigo-500 text-2xl font-bold">AI Researcher</h1>
+        </aside>
+        <main class="flex-1 p-10">
+            <div class="glass-card bg-slate-900/40 border border-slate-800/50 backdrop-blur-md rounded-2xl p-8">
+                <h2 class="text-slate-100 font-bold text-xl mb-4">Analyze Text</h2>
+                <textarea id="article-text" rows="10" class="w-full bg-slate-950/50 border border-slate-800 focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 rounded p-2 text-slate-100"></textarea>
+                <button id="analyze-button" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-500 transition-all duration-300">Analyze with GPT</button>
+            </div>
+            <div id="summary-result" class="mt-10 glass-card bg-slate-900/40 border border-slate-800/50 backdrop-blur-md rounded-2xl p-8 text-slate-100">
+                <!-- Results will be rendered here -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById('analyze-button').addEventListener('click', function() {
+            const text = document.getElementById('article-text').value;
+            if (!text) {
+                alert('Please enter text to analyze.');
+                return;
+            }
+
+            fetch('/api/v1/apps/execute/ai_researcher/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultContainer = document.getElementById('summary-result');
+                if (data.status === 'success') {
+                    const summary = data.data.summary;
+                    resultContainer.innerHTML = `
+                        <h3 class="text-indigo-400 font-bold">Summary</h3>
+                        <p>${summary || 'No summary available.'}</p>
+                    `;
+                } else {
+                    resultContainer.innerHTML = `<p class="text-rose-500 font-bold">Failed to analyze text: ${data.message}</p>`;
+                }
+            })
+            .catch(error => {
+                const resultContainer = document.getElementById('summary-result');
+                resultContainer.innerHTML = `<p class="text-rose-500 font-bold">Error: ${error.message}</p>`;
+            });
+        });
+    </script>
+</body>
+</html>
