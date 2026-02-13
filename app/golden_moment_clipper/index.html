@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golden Moment Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css" rel="stylesheet">
+    <style>
+        :root { --bg: #050505; --panel: rgba(10, 15, 20, 0.95); --cyan: #00f3ff; --gold: #ffd700; --text: #e0f0ff; }
+        body { background: var(--bg); color: var(--text); font-family: 'Rajdhani', sans-serif; overflow: hidden; }
+        .glass { background: var(--panel); border: 1px solid rgba(0, 243, 255, 0.2); backdrop-filter: blur(5px); }
+        .cyber-input { background: rgba(0,0,0,0.5); border: 1px solid #333; color: white; padding: 8px; font-family: 'JetBrains Mono'; width: 100%; border-radius: 4px; outline: none; }
+        .cyber-input:focus { border-color: var(--cyan); }
+        .cyber-btn { background: rgba(0, 243, 255, 0.1); border: 1px solid var(--cyan); color: var(--cyan); padding: 10px 20px; font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; }
+        .cyber-btn:hover { background: var(--cyan); color: black; box-shadow: 0 0 15px var(--cyan); }
+        .log-panel { font-family: 'JetBrains Mono'; font-size: 12px; height: 100%; overflow-y: auto; color: #aaa; }
+        .log-line.info { color: var(--cyan); }
+        .log-line.warn { color: var(--gold); }
+        .log-line.error { color: #ff0055; }
+
+        #folderModal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 100; padding: 50px; }
+        .modal-content { background: #111; border: 1px solid var(--gold); max-width: 700px; margin: 0 auto; border-radius: 10px; padding: 20px; max-height: 80vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 0 30px rgba(255, 215, 0, 0.2); }
+        .folder-item { padding: 10px; border-bottom: 1px solid #222; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .folder-item:hover { background: rgba(255, 215, 0, 0.1); color: var(--gold); }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-4 gap-4">
+    <div id="folderModal">
+        <div class="modal-content">
+            <h2 style="font-family: Orbitron; color: var(--gold); font-size: 18px;">SELECT FILE / FOLDER</h2>
+            <div id="folderList" style="border: 1px solid #333; max-height: 400px; overflow-y: auto; margin-bottom: 10px;"></div>
+            <div style="display:flex; gap: 10px;">
+                <button class="cyber-btn" style="flex:1; border-color: #444; color: #888;" onclick="closeModal()">CANCEL</button>
+                <button class="cyber-btn" style="flex:1; border-color: var(--gold); color: var(--gold);" onclick="selectCurrentFolder()">SET THIS FOLDER</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass h-16 rounded-xl flex items-center px-6 justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <i class="mdi mdi-movie-edit text-3xl text-[var(--gold)]"></i>
+            <div>
+                <h1 class="font-bold text-xl tracking-widest text-white">GOLDEN MOMENT STUDIO</h1>
+                <p class="text-xs text-gray-500 font-mono">AI AUTOMATED VIDEO PRODUCTION</p>
+            </div>
+        </div>
+        <div id="statusBadge" class="hidden px-3 py-1 border border-yellow-500 text-yellow-500 rounded text-xs animate-pulse">PROCESSING</div>
+    </div>
+
+    <div class="flex-1 flex gap-4 overflow-hidden">
+        <div class="w-1/3 glass rounded-xl flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-gray-800 font-bold text-[var(--cyan)]">CONFIGURATION</div>
+            <div class="flex-1 overflow-y-auto p-4 space-y-6">
+                <div>
+                    <label class="text-xs text-gray-500 font-bold mb-1 block">SOURCE FOLDER (Batch)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="inputPath" class="cyber-input text-xs" placeholder="/path/to/videos">
+                        <button class="cyber-btn px-3 py-1 text-xs" onclick="openFolderBrowser('inputPath')" title="Browse Folder"><i class="mdi mdi-folder-search"></i></button>
+                    </div>
+                </div>
+                 <div>
+                    <label class="text-xs text-gray-500 font-bold mb-1 block">OUTRO VIDEO (Optional)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="outroPath" class="cyber-input text-xs" placeholder="/path/to/outro.mp4">
+                        <button class="cyber-btn px-3 py-1 text-xs" onclick="openFolderBrowser('outroPath')" title="Browse File"><i class="mdi mdi-file-video"></i></button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs text-gray-500 font-bold mb-1 block">TIMESTAMPS (TIME|ID|JUDUL)</label>
+                    <textarea id="timestamps" rows="6" class="cyber-input text-xs" placeholder="Format: 03:20-03:57|1|CONTOH JUDUL&#10;Kosongkan judul jika ingin mode polos."></textarea>
+                    <p class="text-[10px] text-gray-500 mt-1">*ID 1 = Video urutan pertama (A-Z), ID 2 = Urutan kedua, dst.</p>
+                </div>
+
+                <div class="border-t border-gray-800 pt-4">
+                    <label class="text-xs text-[var(--gold)] font-bold mb-2 block"><i class="mdi mdi-robot"></i> AI INTELLIGENCE</label>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <div>
+                            <span class="text-xs text-gray-400">Model</span>
+                            <select id="whisperModel" class="cyber-input text-xs">
+                                <option value="tiny">Tiny</option>
+                                <option value="small" selected>Small</option>
+                                <option value="medium">Medium</option>
+                            </select>
+                        </div>
+                        <div>
+                            <span class="text-xs text-gray-400">Layout</span>
+                            <select id="resizeMode" class="cyber-input text-xs">
+                                <option value="face_jump">AI Face Jump</option>
+                                <option value="podcast_split">Podcast Split</option>
+                                <option value="mouse_smooth">Mouse Follow</option>
+                                <option value="fit">Fit Screen</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="smartCut" checked> <span class="text-xs text-gray-300">Smart Cut (Cari Titik Kalimat)</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <input type="checkbox" id="removeSilence"> <span class="text-xs text-gray-300">Remove Silence</span>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-800 pt-4">
+                    <label class="text-xs text-[var(--cyan)] font-bold mb-2 block"><i class="mdi mdi-palette"></i> VISUALS</label>
+                    <div class="flex items-center gap-2 mb-2">
+                        <input type="checkbox" id="addSubs" checked> <span class="text-xs text-gray-300">Karaoke Subtitles</span>
+                    </div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <input type="checkbox" id="watermarkToggle" checked> <span class="text-xs text-gray-300">Enable Watermark</span>
+                    </div>
+                    <input type="text" id="watermark" class="cyber-input text-xs mb-2" value="Created with Flowork" placeholder="Watermark Text">
+                    <div class="flex gap-2 items-center">
+                        <input type="checkbox" id="mergeClips"> <span class="text-xs text-gray-300">Merge All Output?</span>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-800 pt-4">
+                    <label class="text-xs text-gray-500 font-bold mb-1 block">OUTPUT FOLDER</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="outputPath" class="cyber-input text-xs" placeholder="/path/to/save">
+                        <button class="cyber-btn px-3 py-1 text-xs" onclick="openFolderBrowser('outputPath')" title="Browse Folder"><i class="mdi mdi-folder-search"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-gray-800">
+                <button onclick="startJob()" id="btnStart" class="cyber-btn w-full flex justify-center gap-2">
+                    <i class="mdi mdi-rocket-launch"></i> INITIATE RENDER
+                </button>
+            </div>
+        </div>
+
+        <div class="flex-1 glass rounded-xl flex flex-col overflow-hidden p-4">
+            <div class="flex justify-between items-center mb-2">
+                <span class="font-mono text-xs text-gray-500">SYSTEM TELEMETRY</span>
+                <button onclick="clearLog()" class="text-gray-600 hover:text-white"><i class="mdi mdi-delete"></i></button>
+            </div>
+            <div id="terminal" class="log-panel bg-black/50 p-2 rounded border border-gray-800">
+                <div class="log-line info">> System Ready. Waiting for configuration...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const APP_ID = "golden_moment_clipper";
+        let pollInterval = null;
+        let currentTargetInputId = null;
+        let currentPath = "";
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let userId = urlParams.get('user_id');
+
+        if (!userId || userId === "null" || userId === "undefined" || userId.trim() === "") {
+            userId = "system";
+        }
+
+        async function openFolderBrowser(targetId) {
+            currentTargetInputId = targetId;
+            document.getElementById('folderModal').style.display = 'block';
+            await loadDir(document.getElementById(targetId).value || "");
+        }
+
+        async function loadDir(path) {
+            try {
+                const response = await fetch(`/api/v1/apps/execute/${APP_ID}/browse_directory`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: path, user_id: userId })
+                });
+                const data = await response.json();
+                if(data.error) { log(`FS Error: ${data.error}`, "error"); return; }
+
+                let html = '';
+                if(data.items) {
+                    data.items.forEach(item => {
+                        const safePath = item.path.replace(/\\/g, '\\\\');
+                        const icon = item.icon || (item.type === 'folder' ? 'mdi-folder' : 'mdi-file');
+                        const color = item.type === 'folder' ? 'text-yellow-500' : 'text-gray-400';
+
+                        html += `<div class="folder-item" onclick="pickItem('${safePath}', '${item.type}')">
+                                    <div class="${color} flex items-center gap-2">
+                                        <i class="mdi ${icon} text-lg"></i>
+                                        <span>${item.name}</span>
+                                    </div>
+                                 </div>`;
+                    });
+                }
+                document.getElementById('folderList').innerHTML = html;
+                currentPath = data.current_path;
+            } catch(e) { log("Browser Conn Error", "error"); }
+        }
+
+        function pickItem(path, type) {
+            if(type === 'folder') { loadDir(path); }
+            else { currentPath = path; selectCurrentFolder(); }
+        }
+
+        function selectCurrentFolder() {
+            if(currentTargetInputId) { document.getElementById(currentTargetInputId).value = currentPath; }
+            closeModal();
+        }
+
+        function closeModal() { document.getElementById('folderModal').style.display = 'none'; }
+
+        function log(msg, type='info') {
+            const term = document.getElementById('terminal');
+            const time = new Date().toLocaleTimeString();
+            term.innerHTML += `<div class="log-line ${type}">[${time}] ${msg}</div>`;
+            term.scrollTop = term.scrollHeight;
+        }
+        function clearLog() { document.getElementById('terminal').innerHTML = ""; }
+
+        async function startJob() {
+            const wmToggle = document.getElementById('watermarkToggle').checked;
+            const config = {
+                input_folder_path: document.getElementById('inputPath').value,
+                output_folder: document.getElementById('outputPath').value,
+                outro_path: document.getElementById('outroPath').value,
+                timestamps: document.getElementById('timestamps').value,
+                whisper_model: document.getElementById('whisperModel').value,
+                resize_mode: document.getElementById('resizeMode').value,
+                smart_cut_mode: document.getElementById('smartCut').checked,
+                remove_silence: document.getElementById('removeSilence').checked,
+                add_subtitles: document.getElementById('addSubs').checked,
+                watermark_text: wmToggle ? document.getElementById('watermark').value : "",
+                merge_clips: document.getElementById('mergeClips').checked,
+                user_id: userId
+            };
+
+            if(!config.input_folder_path || !config.output_folder || !config.timestamps) {
+                log("ERROR: Check Paths & Timestamps!", "error");
+                return;
+            }
+
+            document.getElementById('btnStart').disabled = true;
+            document.getElementById('statusBadge').classList.remove('hidden');
+            log("Initializing Process...", "info");
+
+            try {
+                const res = await fetch(`/api/v1/apps/execute/${APP_ID}/start_processing`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(config)
+                });
+                const data = await res.json();
+                if(data.status === 'success') {
+                    log(`Job Started: ${data.job_id}`, "info");
+                    startPolling(data.job_id);
+                } else {
+                    log(`Start Failed: ${data.error}`, "error");
+                    resetUI();
+                }
+            } catch(e) { log(`Conn Error: ${e}`, "error"); resetUI(); }
+        }
+
+        function startPolling(jobId) {
+            pollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/v1/apps/execute/${APP_ID}/progress`, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({job_id: jobId, user_id: userId})
+                    });
+                    const data = await res.json();
+                    if(data.logs) data.logs.forEach(l => log(l.msg, l.type));
+                    if(data.status === 'completed' || data.status === 'failed') stopPolling();
+                } catch(e) { console.error(e); }
+            }, 1000);
+        }
+
+        function stopPolling() { clearInterval(pollInterval); resetUI(); }
+        function resetUI() {
+            document.getElementById('btnStart').disabled = false;
+            document.getElementById('statusBadge').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

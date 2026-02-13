@@ -1,0 +1,23 @@
+{
+    "id": "chatgpt_app",
+    "name": "ChatGPT AI Provider",
+    "version": "1.0.0",
+    "description": "App-level AI Provider using Immortal Bridge architecture.",
+    "category": "agents",
+    "type": "apps",
+    "author": "Flowork User",
+    "tier": "architect",
+    "entry_point": "backend/app_service.py",
+    "runtime": "python",
+    "icon": "icon.svg",
+    "gui": {
+        "enabled": true,
+        "dashboard_path": "index.html",
+        "icon": "mdi-robot"
+    },
+    "provides": [
+        "generate",
+        "status"
+    ],
+    "is_installed": true
+}

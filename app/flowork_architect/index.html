@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Flowork Neural Architect</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <style>
+        :root { --bg: #050505; --panel: #111; --accent: #2979ff; --gold: #ffd700; --border: #222; --cyan: #00ffff; --danger: #ff4444; --success: #00e676; --warn: #ffab00; }
+        body, html { height: 100vh; width: 100vw; margin: 0; padding: 0; background: var(--bg); overflow: hidden; color: #ccc; font-family: 'Segoe UI', monospace; display: flex; }
+
+        /* EXPLORER SIDEBAR */
+        #explorer { width: 320px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; }
+        #explorer-header { padding: 15px; border-bottom: 1px solid var(--border); background: #000; }
+        #search-box { width: 100%; background: #1a1a1a; border: 1px solid #333; color: var(--gold); padding: 8px; border-radius: 4px; box-sizing: border-box; font-size: 11px; margin-top: 10px; outline: none; }
+        #file-tree-container { flex: 1; overflow-y: auto; padding: 10px 0; }
+        .tree-node { padding-left: 15px; }
+        .tree-item { padding: 4px 8px; cursor: pointer; font-size: 11px; display: flex; align-items: center; gap: 10px; color: #888; border-radius: 4px; margin: 2px 5px; }
+        .tree-item:hover { color: #fff; background: #1a1a1a; }
+        .tree-item.active { background: #1a2a3a; color: var(--accent); }
+        .tree-item.zombie { color: var(--danger); }
+
+        /* MAIN VISUALIZATION */
+        #main-column { flex: 1; height: 100vh; position: relative; display: flex; flex-direction: column; overflow: hidden; }
+        #mynetwork { flex: 1; width: 100%; height: 100%; }
+        #empty-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: var(--bg); z-index: 10; color: #222; pointer-events: none; transition: opacity 0.3s; }
+        .leg-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        /* INTEL SIDEBAR (RIGHT) */
+        #intel { width: 450px; background: var(--panel); border-left: 1px solid var(--border); position: absolute; right: -450px; top: 0; height: 100vh; transition: 0.3s cubic-bezier(0.19, 1, 0.22, 1); z-index: 200; display: flex; flex-direction: column; }
+        #intel.open { right: 0; box-shadow: -10px 0 30px rgba(0,0,0,0.9); }
+        .side-header { padding: 20px; background: #000; border-bottom: 1px solid var(--border); }
+        .side-body { flex: 1; overflow-y: auto; padding: 15px; }
+
+        .card { padding: 10px; background: #1a1a1a; border: 1px solid #222; margin-bottom: 8px; border-radius: 4px; font-size: 11px; display: flex; flex-direction: column; gap: 5px; transition: 0.2s; cursor: pointer; }
+        .card:hover { border-color: #444; background: #222; }
+        .card-main { display: flex; align-items: center; justify-content: space-between; }
+        .card-path { font-size: 8px; color: #555; font-style: italic; }
+        .copy-btn { color: #555; cursor: pointer; transition: 0.2s; }
+        .tag { font-size: 8px; padding: 2px 5px; border-radius: 3px; background: #333; color: #aaa; text-transform: uppercase; margin-left: 10px; }
+        .tag.dep { border: 1px solid var(--cyan); color: var(--cyan); background: transparent; }
+        .tag.base-class { border: 1px solid var(--accent); color: var(--accent); background: transparent; margin-left: 5px; }
+
+        .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .metric-box { background: #1a1a1a; padding: 10px; border-radius: 4px; border: 1px solid #333; text-align: center; }
+        .metric-val { font-size: 14px; font-weight: bold; color: #fff; margin-bottom: 2px; }
+        .metric-lbl { font-size: 8px; color: #666; text-transform: uppercase; }
+        .badge-low { color: var(--success); }
+        .badge-med { color: var(--warn); }
+        .badge-high { color: var(--danger); }
+        .badge-critical { color: #ff0000; text-shadow: 0 0 5px red; }
+
+        /* ALERT BOXES */
+        .alert-box { padding:10px; border:1px solid; font-size:10px; margin-bottom:10px; border-radius:4px; display: none; }
+        .alert-zombie { background:rgba(255, 68, 68, 0.1); border-color: var(--danger); color: var(--danger); }
+        .alert-security { background:rgba(255, 0, 0, 0.2); border-color: #ff0000; color: #ff5555; font-weight: bold; animation: pulse 2s infinite; }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); } }
+
+        /* MONACO OVERLAY */
+        #ide-overlay { position: fixed; inset: 0; background: #1e1e1e; display: none; flex-direction: column; z-index: 1000; }
+        #monaco-container { flex: 1; }
+        #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--gold); }
+        .btn { background: #222; border: 1px solid #444; color: white; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold; }
+
+        .btn-atlas { background: var(--gold); color: black; border: none; padding: 4px 10px; }
+        .btn-sync { background: var(--accent); color: white; border: none; padding: 4px 10px; }
+        .btn-sync:hover { background: #1565c0; }
+
+        .btn-crud { flex: 1; padding: 6px; font-size: 10px; background: #1a1a1a; border-color: #333; transition: 0.2s; }
+        .btn-crud:hover { background: #333; border-color: #555; }
+        .btn-del:hover { background: #b71c1c !important; border-color: #f00 !important; }
+
+        .btn-zombie { border: 1px solid var(--danger); color: var(--danger); background: transparent; padding: 4px 8px; font-size: 10px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .btn-zombie.active { background: var(--danger); color: black; }
+    </style>
+</head>
+<body>
+
+    <div id="loading"><h2>WIRING NEURAL GALAXY...</h2></div>
+
+    <aside id="explorer">
+        <div id="explorer-header">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size: 11px; color:#666; font-weight: bold;">SYSTEM EXPLORER (<span id="count">0</span>)</div>
+                <div style="display:flex; gap:5px;">
+                    <button onclick="forceSync()" class="btn btn-sync" title="Sync Folder Structure">
+                        <i class="fas fa-sync"></i>
+                    </button>
+                    <button onclick="exportCSV()" class="btn btn-atlas" title="Download CSV">
+                        <i class="fas fa-file-csv"></i>
+                    </button>
+                    <button onclick="exportJSON()" class="btn btn-atlas" title="Download JSON Context" style="background:var(--cyan); color:black;">
+                        <i class="fas fa-file-code"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-top: 10px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:9px; color:#555;">FILTERS:</span>
+                <button id="btn-zombie-toggle" onclick="toggleZombies()" class="btn-zombie" title="Show Orphaned Files (Potential Zombies)">
+                    <i class="fas fa-skull"></i> ZOMBIES (<span id="zombie-count">0</span>)
+                </button>
+            </div>
+
+            <div style="display:flex; gap:5px; margin-top:10px; padding-top:10px; border-top:1px solid #222;">
+                <button onclick="crudAction('create_file')" class="btn btn-crud" title="New File"><i class="fas fa-file-circle-plus" style="color:var(--cyan)"></i></button>
+                <button onclick="crudAction('create_folder')" class="btn btn-crud" title="New Folder"><i class="fas fa-folder-plus" style="color:var(--gold)"></i></button>
+                <button onclick="crudAction('rename')" class="btn btn-crud" title="Rename"><i class="fas fa-pen-to-square"></i></button>
+                <button onclick="crudAction('delete')" class="btn btn-crud btn-del" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
+
+            <input type="text" id="search-box" placeholder="Filter files..." oninput="renderExplorer()">
+        </div>
+        <div id="file-tree-container"></div>
+    </aside>
+
+    <main id="main-column">
+        <div id="empty-overlay">
+            <i class="fas fa-brain" style="font-size:60px; margin-bottom:20px;"></i>
+            <h2 style="letter-spacing: 3px;">SELECT NEURAL FILE</h2>
+        </div>
+        <div id="mynetwork"></div>
+
+        <div style="position:absolute; top:20px; right:20px; z-index:101; display:flex; gap:10px;">
+            <button class="btn" onclick="exportPNG()"><i class="fas fa-camera"></i> PNG</button>
+            <button class="btn" style="background:#333" onclick="location.reload()">REFRESH</button>
+        </div>
+    </main>
+
+    <aside id="intel">
+        <div class="side-header">
+            <button onclick="closeSidebar()" style="float:right; background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
+            <h4 id="intel-name" style="margin:0; color:var(--gold)">FILE INTEL</h4>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                <small id="intel-path" style="color:#555; font-size: 9px;"></small>
+                <button class="btn" style="padding:4px 10px; font-size:9px; background:var(--gold); color:#000; border:none;" onclick="copyMasterIntel()">
+                    <i class="fas fa-copy"></i> MASTER COPY
+                </button>
+            </div>
+        </div>
+        <div class="side-body">
+
+            <div id="security-alert" class="alert-box alert-security">
+                <i class="fas fa-shield-virus"></i> <b>SECURITY RISK DETECTED!</b><br>
+                <span id="security-msg"></span>
+            </div>
+
+            <div id="zombie-alert" class="alert-box alert-zombie">
+                <i class="fas fa-skull"></i> <b>ZOMBIE DETECTED:</b> This file has 0 inbound connections.
+            </div>
+
+            <div class="metric-grid">
+                <div class="metric-box">
+                    <div id="metric-comp" class="metric-val">-</div>
+                    <div class="metric-lbl">Complexity</div>
+                </div>
+                <div class="metric-box">
+                    <div id="metric-loc" class="metric-val">-</div>
+                    <div class="metric-lbl">Lines</div>
+                </div>
+                <div class="metric-box">
+                    <div id="metric-debt" class="metric-val">-</div>
+                    <div class="metric-lbl">Issues (TODO)</div>
+                </div>
+                <div class="metric-box">
+                    <div id="metric-age" class="metric-val" style="font-size:10px; line-height:14px; margin-top:2px">-</div>
+                    <div class="metric-lbl">Last Mod</div>
+                </div>
+            </div>
+
+            <h5 style="color:#fff; border-bottom: 1px solid #222; padding-bottom:5px"><i class="fas fa-link"></i> INBOUND</h5>
+            <div id="inbound-list"></div>
+            <h5 style="color:var(--gold); border-bottom: 1px solid #222; padding-bottom:5px; margin-top:20px;"><i class="fas fa-share"></i> OUTBOUND</h5>
+            <div id="outbound-list"></div>
+
+            <h5 style="color:var(--cyan); border-bottom: 1px solid #222; padding-bottom:5px; margin-top:20px;"><i class="fas fa-boxes-stacked"></i> EXTERNAL DEPENDENCIES</h5>
+            <div id="dep-list" style="display:flex; flex-wrap:wrap; gap:5px; padding: 10px 0;"></div>
+
+            <h5 style="color:var(--accent); border-bottom: 1px solid #222; padding-bottom:5px; margin-top:20px;"><i class="fas fa-list"></i> ORGANS</h5>
+            <div id="organ-list"></div>
+        </div>
+        <div style="padding: 15px; background: #000; border-top: 1px solid #222;">
+            <button class="btn" style="width:100%; background:#fff; color:#000; border:none" onclick="openIDE()"><i class="fas fa-code"></i> EDIT CODE</button>
+        </div>
+    </aside>
+
+    <div id="ide-overlay">
+        <div style="padding: 10px 25px; background: #252526; display: flex; justify-content: space-between; border-bottom: 1px solid #333; align-items: center;">
+            <span id="ide-title" style="color:var(--gold); font-size:11px; font-weight:bold;">Editor</span>
+            <div style="display:flex; gap:10px;">
+                <button class="btn" style="background:var(--gold); color:black; border:none" onclick="saveFile()">SAVE</button>
+                <button class="btn" onclick="closeIDE()">CLOSE</button>
+            </div>
+        </div>
+        <div id="monaco-container"></div>
+    </div>
+
+<script>
+    let network = null, editor = null, GLOBAL_DATA = null, activePath = null, activeContent = "", LATEST_INTEL = null;
+    let nodesDS = new vis.DataSet([]), edgesDS = new vis.DataSet([]);
+    let expandedFolders = new Set();
+    let SHOW_ZOMBIES_ONLY = false;
+
+    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
+    require(['vs/editor/editor.main'], function() {
+        editor = monaco.editor.create(document.getElementById('monaco-container'), { theme: 'vs-dark', automaticLayout: true, fontSize: 13 });
+    });
+
+    // === MAIN LOGIC ===
+    async function fetchData() {
+        try {
+            // [FIXED] URL Pointing to correct backend route
+            const res = await fetch(`/api/v1/apps/execute/flowork_architect/scan`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({})
+            });
+
+            if (!res.ok) throw new Error(`Server returned ${res.status}`);
+
+            const result = await res.json();
+
+            // [FIXED] Check for nested data property
+            if(result.status === 'success' && result.data) {
+                GLOBAL_DATA = result.data;
+                document.getElementById('zombie-count').innerText = GLOBAL_DATA.zombie_count || 0;
+                renderExplorer();
+
+                // === SHOW FULL CONNECTED GRAPH INSTANTLY ===
+                if (GLOBAL_DATA.edges && GLOBAL_DATA.edges.length > 0) {
+                    const connectedNodeIds = new Set();
+                    GLOBAL_DATA.edges.forEach(e => {
+                        connectedNodeIds.add(e.from);
+                        connectedNodeIds.add(e.to);
+                    });
+
+                    const initialNodes = GLOBAL_DATA.nodes.filter(n => connectedNodeIds.has(n.id)).map(n => {
+                        const mainIconFace = n.icon_face === "Brands" ? "'Font Awesome 6 Brands'" : "'Font Awesome 6 Free'";
+                        const mainIconCode = n.is_zombie ? '\uf714' : String.fromCharCode(parseInt(n.icon_code, 16));
+                        return {
+                            ...n,
+                            label: n.label,
+                            shape: 'icon',
+                            icon: { face: mainIconFace, code: mainIconCode, color: n.color, size: 45 },
+                            font: { color: '#ccc', size: 10 }
+                        };
+                    });
+
+                    nodesDS.clear();
+                    edgesDS.clear();
+                    nodesDS.add(initialNodes);
+                    edgesDS.add(GLOBAL_DATA.edges);
+
+                    document.getElementById('empty-overlay').style.display = 'none';
+
+                    if(!network) {
+                        const container = document.getElementById('mynetwork');
+                        network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+                            layout: { improvedLayout: false },
+                            physics: {
+                                solver: 'forceAtlas2Based',
+                                forceAtlas2Based: { gravitationalConstant: -80, centralGravity: 0.005, springLength: 200, springConstant: 0.1 },
+                                stabilization: { enabled: true, iterations: 1000 }
+                            },
+                            interaction: { hover: true, tooltipDelay: 200 },
+                            edges: { arrows: 'to', smooth: { type: 'continuous' } }
+                        });
+                        network.on("click", p => p.nodes.length && switchToFocus(p.nodes[0]));
+                    } else {
+                        network.setData({ nodes: nodesDS, edges: edgesDS });
+                    }
+
+                    network.fit({ animation: true });
+                }
+
+                document.getElementById('loading').style.display = 'none';
+            }
+        } catch(e) {
+            console.error("Neural Sync Error:", e);
+            document.getElementById('loading').innerHTML = `
+                <div style="text-align:center; padding:20px; border:1px solid #333; background:#000;">
+                    <h2 style="color:var(--danger)">CONNECTION FAILED</h2>
+                    <p style="color:#aaa; font-size:12px">${e.message}</p>
+                    <button class="btn" style="margin-top:10px" onclick="location.reload()">TRY AGAIN</button>
+                </div>`;
+        }
+    }
+
+    async function forceSync() {
+        if (!confirm("Rebuild Neural Index & Atlas?")) return;
+        try {
+            const res = await fetch(`/api/v1/apps/execute/flowork_architect/force_sync`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({})
+            });
+            const result = await res.json();
+            if(result.status === 'success') {
+                alert("Indexing started! Wait a few seconds, then click REFRESH.");
+            }
+        } catch(e) { alert("Sync failed."); }
+    }
+
+    function toggleZombies() {
+        SHOW_ZOMBIES_ONLY = !SHOW_ZOMBIES_ONLY;
+        const btn = document.getElementById('btn-zombie-toggle');
+        if(SHOW_ZOMBIES_ONLY) btn.classList.add('active'); else btn.classList.remove('active');
+        renderExplorer();
+    }
+
+    function renderExplorer() {
+        if(!GLOBAL_DATA || !GLOBAL_DATA.nodes) return;
+        const term = document.getElementById('search-box').value.toLowerCase();
+        const tree = {};
+
+        GLOBAL_DATA.nodes.forEach(f => {
+            if (term && !f.path.toLowerCase().includes(term)) return;
+            if (SHOW_ZOMBIES_ONLY && !f.is_zombie) return;
+
+            const parts = f.path.split(/[\\/]/);
+            let cur = tree;
+            parts.forEach((p, i) => { if (i === parts.length - 1) cur[p] = f; else { if (!cur[p]) cur[p] = {}; cur = cur[p]; } });
+        });
+
+        document.getElementById('file-tree-container').innerHTML = "";
+        document.getElementById('file-tree-container').appendChild(buildTreeUI(tree, ""));
+
+        const count = SHOW_ZOMBIES_ONLY ? (GLOBAL_DATA.zombie_count || 0) : GLOBAL_DATA.nodes.length;
+        document.getElementById('count').innerText = count;
+    }
+
+    function buildTreeUI(obj, path) {
+        const frag = document.createDocumentFragment();
+        Object.keys(obj).sort((a,b) => (typeof obj[a]==='object' && !obj[a].id ? -1 : 1)).forEach(k => {
+            const val = obj[k], full = path ? `${path}/${k}` : k, div = document.createElement('div');
+            div.className = "tree-node";
+            if (typeof val === 'object' && !val.id) {
+                const open = expandedFolders.has(full) || document.getElementById('search-box').value !== "" || SHOW_ZOMBIES_ONLY;
+                const row = document.createElement('div');
+                row.className = "tree-item";
+                row.innerHTML = `<span style="width:10px">${open ? '▼' : '▶'}</span> <i class="fas fa-folder" style="color:#e8a838"></i> ${k}`;
+                row.onclick = (e) => { e.stopPropagation(); open ? expandedFolders.delete(full) : expandedFolders.add(full); renderExplorer(); };
+                div.appendChild(row);
+                if (open) div.appendChild(buildTreeUI(val, full));
+            } else {
+                const isZombie = val.is_zombie;
+                const row = document.createElement('div');
+                row.className = "tree-item" + (activePath === val.path ? " active" : "") + (isZombie ? " zombie" : "");
+                const icon = isZombie ? 'fa-skull' : getIconClass(val.ext);
+                row.innerHTML = `<i class="${isZombie ? 'fas' : ''} ${icon}" style="color:${val.color}"></i> ${k}`;
+                row.onclick = (e) => { e.stopPropagation(); switchToFocus(val.id); };
+                div.appendChild(row);
+            }
+            frag.appendChild(div);
+        });
+        return frag;
+    }
+
+    function getIconClass(ext) {
+        const m = { py: 'fa-brands fa-python', js: 'fa-brands fa-js', vue: 'fa-brands fa-vuejs', html: 'fa-brands fa-html5', css: 'fa-brands fa-css3-alt', bat: 'fa-brands fa-windows', sh: 'fa-brands fa-linux', json: 'fas fa-code' };
+        return m[ext] || 'far fa-file-code';
+    }
+
+    async function switchToFocus(nodeId) {
+        document.getElementById('empty-overlay').style.display = 'none';
+        const node = GLOBAL_DATA.nodes.find(n => n.id === nodeId);
+        if(!node) return;
+        activePath = node.path; renderExplorer();
+        document.getElementById('intel-name').innerText = node.label;
+        document.getElementById('intel-path').innerText = activePath;
+        document.getElementById('intel').classList.add('open');
+
+        document.getElementById('zombie-alert').style.display = node.is_zombie ? 'block' : 'none';
+        document.getElementById('security-alert').style.display = 'none';
+
+        const res = await fetch(`/api/v1/apps/execute/flowork_architect/get_intel`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ path: activePath })
+        });
+        const intel = await res.json();
+
+        if(intel.status === 'success') {
+            LATEST_INTEL = intel;
+            activeContent = intel.content;
+            const m = intel.metrics || {};
+
+            if(m.security_risks && m.security_risks.length > 0) {
+                document.getElementById('security-alert').style.display = 'block';
+                document.getElementById('security-msg').innerText = m.security_risks.join(', ');
+            }
+
+            const elComp = document.getElementById('metric-comp');
+            elComp.innerText = m.complexity || "?";
+            elComp.className = "metric-val " + (m.complexity === "CRITICAL" ? "badge-critical" : m.complexity === "HIGH" ? "badge-high" : m.complexity === "MEDIUM" ? "badge-med" : "badge-low");
+            document.getElementById('metric-loc').innerText = m.loc || 0;
+            const elDebt = document.getElementById('metric-debt');
+            elDebt.innerText = m.todo_count || 0;
+            elDebt.style.color = m.todo_count > 0 ? "var(--warn)" : "#fff";
+
+            if (m.last_modified) {
+                const date = new Date(m.last_modified * 1000);
+                document.getElementById('metric-age').innerText = date.toLocaleDateString() + "\n" + date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            }
+
+            nodesDS.clear(); edgesDS.clear();
+            const mainIconFace = node.icon_face === "Brands" ? "'Font Awesome 6 Brands'" : "'Font Awesome 6 Free'";
+            const mainIconCode = node.is_zombie ? '\uf714' : String.fromCharCode(parseInt(node.icon_code, 16));
+
+            nodesDS.add({ ...node, label: node.label, shape: 'icon', icon: { face: mainIconFace, code: mainIconCode, color: node.color, size: 45 }, font: { color: '#fff', size: 14, strokeWidth: 2, strokeColor: '#000' } });
+
+            const focusedEdges = [];
+            // --- START RULE EMAS FIX: NULL SAFE FOCUS ---
+            const mapConnections = (list, edgeColor, edgeLabel) => {
+                if(!list) return '';
+                return list.map(targetNode => {
+                    // [Neural Fix] Fixed TypeError: Access properties of null
+                    if(!targetNode || !targetNode.id) return '';
+
+                    const targetFace = targetNode.icon_face === "Brands" ? "'Font Awesome 6 Brands'" : "'Font Awesome 6 Free'";
+                    if(!nodesDS.get(targetNode.id)) {
+                        nodesDS.add({ ...targetNode, shape: 'icon', icon: { face: targetFace, code: String.fromCharCode(parseInt(targetNode.icon_code, 16)), color: targetNode.color, size: 28 }, font: { color: '#888' }});
+                    }
+                    focusedEdges.push({ from: edgeLabel === 'calls' ? nodeId : targetNode.id, to: edgeLabel === 'calls' ? targetNode.id : nodeId, color: edgeColor, width: 3, arrows: 'to', label: edgeLabel });
+
+                    return `<div class="card" onclick="switchToFocus(${targetNode.id})">
+                        <div class="card-main"><div><i class="fas fa-link"></i> ${targetNode.label}</div></div>
+                        <div class="card-path">${targetNode.path}</div>
+                    </div>`;
+                }).join('');
+            };
+
+            document.getElementById('outbound-list').innerHTML = mapConnections(intel.outbound, '#ffd700', 'calls') || "<small>No outbound.</small>";
+            document.getElementById('inbound-list').innerHTML = mapConnections(intel.inbound, '#ffffff', 'used by') || "<small>No inbound.</small>";
+            // --- END NULL SAFE FIX ---
+
+            edgesDS.add(focusedEdges);
+            if(network) { network.setData({ nodes: nodesDS, edges: edgesDS }); network.fit({ animation: true }); }
+
+            document.getElementById('dep-list').innerHTML = (intel.dependencies || []).map(d => `<span class="tag dep">${d}</span>`).join('') || "<small>None</small>";
+
+            document.getElementById('organ-list').innerHTML = (intel.structure || []).map(s => {
+                let basesHtml = (s.bases || []).map(b => `<span class="tag base-class">${b}</span>`).join('');
+                return `<div class="card" onclick="openAtLine(${s.line || 1})"><div class="card-main"><div><i class="fas ${s.icon || 'fa-code'}"></i> <span>${s.name}</span> <span class="tag">${s.type}</span> ${basesHtml}</div></div></div>`;
+            }).join('') || "<small>No structure.</small>";
+        }
+    }
+
+    async function exportCSV() {
+        const res = await fetch(`/api/v1/apps/execute/flowork_architect/export_atlas`, { method: 'POST', body: JSON.stringify({}) });
+        const result = await res.json();
+        if(result.status === 'success') {
+            const blob = new Blob([result.csv], { type: 'text/csv;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `neural-atlas-${Date.now()}.csv`;
+            document.body.appendChild(a); a.click();
+        }
+    }
+
+    async function exportJSON() {
+        const res = await fetch(`/api/v1/apps/execute/flowork_architect/export_json`, { method: 'POST', body: JSON.stringify({}) });
+        const result = await res.json();
+        if(result.status === 'success') {
+            const blob = new Blob([result.json], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `neural-atlas-${Date.now()}.json`;
+            document.body.appendChild(a); a.click();
+        }
+    }
+
+    function copyToClipboard(txt) { const el = document.createElement('textarea'); el.value = txt; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); alert("Copied!"); }
+
+    function copyMasterIntel() {
+        if(!LATEST_INTEL) return;
+        const report = `[NEURAL REPORT: ${activePath}]\nCOMPLEXITY: ${LATEST_INTEL.metrics?.complexity}\nLOC: ${LATEST_INTEL.metrics?.loc}`;
+        copyToClipboard(report);
+    }
+
+    function exportPNG() { const canv = document.querySelector('canvas'); if(canv) { const link = document.createElement('a'); link.download = `neural-map.png`; link.href = canv.toDataURL(); link.click(); } }
+
+    function openIDE() { document.getElementById('ide-overlay').style.display = 'flex'; editor.setValue(activeContent); }
+    function openAtLine(line) { openIDE(); setTimeout(() => { editor.revealLineInCenter(line); editor.setPosition({column: 1, lineNumber: line}); editor.focus(); }, 200); }
+
+    async function saveFile() {
+        await fetch(`/api/v1/apps/execute/flowork_architect/save_file`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path: activePath, content: editor.getValue() }) });
+        alert("Saved!");
+    }
+
+    async function crudAction(actionName) {
+        let name = actionName.startsWith('create') || actionName === 'rename' ? prompt("Enter Name:") : null;
+        if ((actionName.startsWith('create') || actionName === 'rename') && !name) return;
+
+        const res = await fetch(`/api/v1/apps/execute/flowork_architect/crud`, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'crud', crud_action: actionName, path: activePath, name, new_name: name })
+        });
+        const result = await res.json();
+        if (result.status === 'success') fetchData();
+    }
+
+    function closeSidebar() { document.getElementById('intel').classList.remove('open'); }
+    function closeIDE() { document.getElementById('ide-overlay').style.display = 'none'; }
+    window.onload = fetchData;
+</script>
+</body>
+</html>

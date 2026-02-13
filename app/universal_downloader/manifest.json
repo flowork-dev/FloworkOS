@@ -1,0 +1,82 @@
+{
+    "id": "universal_downloader",
+    "name": "Neural Downloader Pro",
+    "version": "3.4.0",
+    "description": "Tactical stream ingestion engine with multi-format neural fetching. Refactored for Sterile Path (No Path Dualism).",
+    "category": "tools",
+
+    "//_ADDED_FOR_CORE_V2": "Field 'type' dibutuhkan oleh AppManagerService baru",
+    "type": "tools",
+
+    "author": "Flowork Cyber Division",
+    "tier": "architect",
+
+    "//_METADATA_FOR_MUSCLE": "Konfigurasi untuk AppRuntime (Otot Baru)",
+    "entry_point": "main.py",
+    "runtime": "python",
+
+    "//_LEGACY_PERMISSIONS": ["network:full", "filesystem:user_data"],
+    "permissions": [
+        "network.outbound",
+        "filesystem.read",
+        "filesystem.write"
+    ],
+
+    "gui": {
+        "enabled": true,
+        "dashboard_path": "index.html",
+        "icon": "mdi-shield-sync"
+    },
+
+    "nodes": [
+        {
+            "id": "neural_fetcher",
+            "name": "Neural Downloader",
+            "description": "Download media from URL using advanced neural fetching via AppRuntime.",
+            "entry_class": "DownloaderNode",
+            "file": "backend/node.py",
+            "inputs": [
+                {
+                    "name": "url",
+                    "label": "Target URLs (Bulk)",
+                    "type": "textarea",
+                    "placeholder": "https://youtube.com/watch?v=...\nhttps://twitter.com/status/...\n(One link per line)",
+                    "default": ""
+                },
+                {
+                    "name": "format_mode",
+                    "label": "Format Mode",
+                    "type": "select",
+                    "options": [
+                        { "label": "Maximum Fidelity", "value": "best" },
+                        { "label": "Fixed MP4 Container", "value": "video_only" },
+                        { "label": "Extract MP3 Neural", "value": "audio_mp3" }
+                    ],
+                    "default": "best"
+                },
+                {
+                    "name": "output_folder",
+                    "label": "Output Directory",
+                    "type": "string",
+                    "ui_type": "folderpath",
+                    "placeholder": "/app/data/users/system/downloads",
+                    "default": ""
+                }
+            ],
+            "outputs": [
+                { "name": "success", "type": "object" },
+                { "name": "error", "type": "string" }
+            ]
+        }
+    ],
+
+    "capabilities": ["stream_ingestion", "vram_isolation", "workflow_node", "filesystem_access"],
+    "tags": ["downloader", "media", "ai", "black-ops"],
+
+    "//_PHASE_1_REGISTRY": "Agar Router Cerdas bisa menemukan layanan ini",
+    "provided_services": [
+        "video_downloader",
+        "media_converter",
+        "stream_ingestion"
+    ]
+}

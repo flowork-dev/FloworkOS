@@ -1,0 +1,44 @@
+{
+  "id": "flowork_architect",
+  "name": "Flowork Cortex",
+  "version": "3.0.0",
+  "description": "Neural Architecture Mapper & Zombie File Hunter (Muscle Powered)",
+  "category": "developer_tools",
+
+  "//_ADDED_FOR_CORE_V2": "Field 'type' dibutuhkan oleh AppManagerService baru",
+  "type": "apps",
+
+  "author": "Flowork Inc.",
+  "tier": "architect",
+
+  "//_METADATA_FOR_MUSCLE": "Konfigurasi untuk Backend (Otot)",
+  "entry_point": "main.py",
+  "runtime": "python",
+
+  "//_LEGACY_PERMISSIONS": ["filesystem", "core_access"],
+  "permissions": [
+    "filesystem.read",
+    "filesystem.write",
+    "core.access"
+  ],
+
+  "//_METADATA_FOR_BROWSER": "Konfigurasi untuk Frontend (Wajah)",
+  "gui": {
+      "enabled": true,
+      "dashboard_path": "index.html",
+      "icon": "mdi-brain"
+  },
+
+  "nodes": [],
+  "display": "standalone",
+  "theme_color": "#00ffff",
+
+  "//_PHASE_1_REGISTRY": "Agar Router Cerdas bisa menemukan layanan ini",
+  "provided_services": [
+    "project_scaffolding",
+    "code_analysis",
+    "zombie_hunter"
+  ],
+
+  "is_system": true
+}

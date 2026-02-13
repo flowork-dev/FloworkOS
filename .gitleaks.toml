@@ -1,0 +1,42 @@
+# Hardcode: English
+# This file configures gitleaks for Flowork-specific secrets.
+# We explicitly allowlist generate_env.py because it defines the secret names,
+# but does not contain the actual secret values.
+
+title = "Gitleaks config for Flowork"
+
+[allowlist]
+description = "Allowlist specific files that define secret names"
+files = [
+    '''generate_env\.py$''', # This file defines the variable names, it's not a leak.
+    '''\.gitleaks\.toml$'''  # Allow the config file itself.
+]
+
+# --- Custom Flowork Rules ---
+# These rules detect if the *actual value* is hardcoded.
+
+[[rules]]
+id = "flowork-admin-token"
+description = "Flowork Admin Token (Hardcoded)"
+# Looks for ADMIN_TOKEN = "..." or similar
+regex = '''(?i)(ADMIN_TOKEN\s*[:=]\s*)['"]([a-zA-Z0-9_\-]{32,})['"]'''
+tags = ["flowork", "secret"]
+
+[[rules]]
+id = "flowork-jwt-secret"
+description = "Flowork JWT Secret Key (Hardcoded)"
+regex = '''(?i)(JWT_SECRET_KEY\s*[:=]\s*)['"]([a-zA-Z0-9_\-]{48,})['"]'''
+tags = ["flowork", "secret"]
+
+[[rules]]
+id = "flowork-gateway-secret"
+description = "Flowork Gateway Secret Token (Hardcoded)"
+regex = '''(?i)(GATEWAY_SECRET_TOKEN\s*[:=]\s*)['"]([a-zA-Z0-9_\-]{48,})['"]'''
+tags = ["flowork", "secret"]
+
+[[rules]]
+id = "flowork-engine-token-prefix"
+description = "Flowork Engine Token (Hardcoded)"
+# Looks for the unique token prefix 'flowork_etkn_'
+regex = '''(flowork_etkn_[a-zA-Z0-9_\-]{40,})'''
+tags = ["flowork", "secret"]

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Downloader - Batch Sequence</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        :root { --bg-core: #050505; --bg-panel: rgba(10, 15, 20, 0.95); --neon-cyan: #00f3ff; --neon-purple: #bc13fe; --neon-green: #00ff66; --neon-alert: #ff0055; --text-main: #ffffff; --glass-border: 1px solid rgba(0, 243, 255, 0.3); --gold: #ffd700; }
+        * { box-sizing: border-box; outline: none; }
+        body { margin: 0; background: var(--bg-core); color: var(--text-main); font-family: 'Rajdhani', sans-serif; overflow: hidden; user-select: none; }
+        .top-bar { height: 50px; background: rgba(0,0,0,0.8); border-bottom: var(--glass-border); display: flex; align-items: center; padding: 0 20px; justify-content: space-between; }
+        .brand { font-family: 'Orbitron'; font-weight: 900; letter-spacing: 2px; color: var(--neon-cyan); }
+        .main-layout { display: grid; grid-template-columns: 320px 1fr; height: calc(100vh - 50px); }
+        .control-panel { background: var(--bg-panel); border-right: var(--glass-border); padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .cyber-input { width: 100%; background: rgba(0,0,0,0.5); border: 1px solid #333; padding: 10px; color: var(--gold); font-family: 'JetBrains Mono'; border-radius: 4px; }
+        .picker-group { display: flex; gap: 5px; }
+        .btn-icon { background: #222; border: 1px solid #444; color: var(--neon-cyan); cursor: pointer; padding: 10px; border-radius: 4px; }
+        .btn-icon:hover { background: var(--neon-cyan); color: black; }
+        .execute-btn { background: none; border: 2px solid var(--neon-cyan); color: var(--neon-cyan); padding: 15px; font-family: 'Orbitron'; font-weight: bold; cursor: pointer; transition: 0.3s; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%); margin-top: 10px; }
+        .execute-btn:hover { background: var(--neon-cyan); color: black; box-shadow: 0 0 20px var(--neon-cyan); }
+        .execute-btn.running { border-color: var(--neon-alert); color: var(--neon-alert); }
+        .execute-btn.running:hover { background: var(--neon-alert); color: white; box-shadow: 0 0 20px var(--neon-alert); }
+        .content-area { padding: 20px; overflow-y: auto; position: relative; }
+        .log-panel { background: rgba(0,0,0,0.95); border: 1px solid #222; border-radius: 8px; height: 500px; overflow-y: auto; font-family: 'JetBrains Mono'; padding: 15px; font-size: 13px; color: var(--neon-cyan); border: 1px solid var(--neon-cyan); box-shadow: inset 0 0 20px rgba(0,243,255,0.1); position: relative; }
+        .log-line { margin-bottom: 5px; border-left: 2px solid #333; padding-left: 10px; line-height: 1.5; border-bottom: 1px solid rgba(255,255,255,0.05); animation: logSlide 0.2s ease-out; }
+        @keyframes logSlide { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        .log-line.success { color: var(--neon-green); }
+        .log-line.error { color: var(--neon-alert); }
+        .log-line.warn { color: var(--gold); }
+        .log-line.system { color: #888; font-style: italic; }
+        .log-line.muscle { color: #00f3ff; text-shadow: 0 0 5px rgba(0,243,255,0.5); font-weight: bold; }
+        .log-line.fake { color: rgba(188, 19, 254, 0.7); font-style: italic; }
+        #folderModal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 100; padding: 50px; }
+        .modal-content { background: #111; border: var(--glass-border); max-width: 700px; margin: 0 auto; border-radius: 10px; padding: 20px; max-height: 80vh; overflow-y: auto; }
+        .folder-item { padding: 10px; border-bottom: 1px solid #222; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+        .folder-item:hover { background: rgba(255,255,255,0.05); }
+        .item-directory { color: var(--gold); }
+        .item-file { color: var(--neon-cyan); }
+        .delete-btn { color: var(--neon-alert); cursor: pointer; font-size: 18px; padding: 5px; }
+        .scanline { width: 100%; height: 2px; background: rgba(0, 243, 255, 0.05); position: absolute; animation: scan 6s linear infinite; pointer-events: none; }
+        @keyframes scan { from { top: 0; } to { top: 100%; } }
+    </style>
+</head>
+<body>
+    <div id="folderModal">
+        <div class="modal-content">
+            <h2 style="font-family: Orbitron; color: var(--neon-cyan); font-size: 18px;">OUTPUT BROWSER</h2>
+            <div style="display:flex; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="newFolderName" class="cyber-input" placeholder="New Folder Name..." style="flex:1;">
+                <button class="btn-icon" onclick="createFolder()"><i class="mdi mdi-folder-plus"></i> CREATE</button>
+            </div>
+            <div id="folderList" style="border: 1px solid #333; max-height: 400px; overflow-y: auto; margin-bottom: 10px;"></div>
+            <button class="execute-btn" style="width:100%;" onclick="selectCurrentFolder()">SET AS TARGET</button>
+            <button onclick="closeModal()" style="background:none; border:none; color:#888; width:100%; margin-top:10px; cursor:pointer;">CANCEL</button>
+        </div>
+    </div>
+
+    <div class="scanline"></div>
+    <div class="top-bar">
+        <div class="brand"><i class="mdi mdi-shield-sync"></i> NEURAL BATCH v4.9</div>
+        <div id="connection-status" style="font-size: 12px; color: var(--neon-alert); border: 1px solid var(--neon-alert); padding: 2px 8px; border-radius: 4px;">SYNC: OFFLINE</div>
+    </div>
+
+    <div class="main-layout">
+        <div class="control-panel">
+            <label style="color: var(--neon-cyan); font-weight: bold; font-size: 13px;">TARGET DATA STREAM</label>
+            <textarea id="targetUrl" class="cyber-input" rows="8" placeholder="Paste links (1 per line)..."></textarea>
+
+            <label style="color: var(--neon-cyan); font-weight: bold; font-size: 13px;">EXTRACTION MODE</label>
+            <select id="mode" class="cyber-input">
+                <option value="best">Best Quality (Auto MP4)</option>
+                <option value="4k">4K Ultra HD (MP4)</option>
+                <option value="2k">2K Quad HD (MP4)</option>
+                <option value="1080p">1080p Full HD (MP4)</option>
+                <option value="720p">720p HD (MP4)</option>
+                <option value="480p">480p SD (MP4)</option>
+                <option value="360p">360p Low Data (MP4)</option>
+                <option value="audio_mp3">Audio Only (MP3)</option>
+            </select>
+
+            <label style="color: var(--neon-cyan); font-weight: bold; font-size: 13px;">OUTPUT DIRECTORY</label>
+            <div class="picker-group">
+                <input type="text" id="outDir" class="cyber-input" value="default" readonly>
+                <button class="btn-icon" onclick="openFolderBrowser()"><i class="mdi mdi-folder-search"></i></button>
+            </div>
+
+            <button class="execute-btn" onclick="handleExtractionToggle()" id="btn-run">START</button>
+        </div>
+        <div class="content-area">
+            <div class="log-panel" id="terminal">
+                <div class="log-line info">> System boot complete. Neural Link ready.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const APP_ID = "universal_downloader";
+        let currentPath = "";
+        let isExtractionRunning = false;
+        let pollInterval = null;
+
+        // [MATA-MATA FIXED] Default ke "system" jika URL kosong, tapi nanti akan di-override backend
+        const urlParams = new URLSearchParams(window.location.search);
+        let userId = urlParams.get('user_id');
+        const engineId = urlParams.get('engine_id');
+
+        // [CRITICAL] Kalau userId kosong (misal lagi dev), biarin kosong biar backend auto-detect
+        if (!userId || userId === "null") userId = "system";
+
+        const socket = io('/gui-socket', {
+            path: '/api/socket.io',
+            transports: ['websocket', 'polling'],
+            query: { user_id: userId, engine_id: engineId }
+        });
+
+        socket.on('connect', () => {
+            document.getElementById('connection-status').style.color = 'var(--neon-green)';
+            document.getElementById('connection-status').style.borderColor = 'var(--neon-green)';
+            document.getElementById('connection-status').innerText = 'SYNC: ONLINE';
+            log("Neural Bridge Established.", "success");
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('connection-status').style.color = 'var(--neon-alert)';
+            document.getElementById('connection-status').style.borderColor = 'var(--neon-alert)';
+            document.getElementById('connection-status').innerText = 'SYNC: OFFLINE';
+        });
+
+        const handleLog = (data) => {
+            if(data.app_id === APP_ID || !data.app_id) {
+                const rawMsg = data.message || data.raw || "";
+                if (rawMsg.includes("###SEQUENCE_COMPLETE###") ||
+                    rawMsg.includes("Download successful. Initiating file assembly")) {
+                     log("✅ [CONFIRMED] SEQUENCE FINISHED.", "success");
+                     stopExtractionUI();
+                }
+                if (rawMsg && !rawMsg.includes("###SEQUENCE_COMPLETE###")) {
+                    log(rawMsg, "muscle");
+                }
+            }
+        };
+
+        // [MODIFIED] Socket Log Listener
+        socket.on('EXECUTION_LOG', handleLog);
+        socket.on('execution_log', handleLog);
+        socket.on('APP_LOG_STREAM', handleLog);
+        socket.on('log_received', handleLog);
+
+        socket.on('APP_PROGRESS', (data) => {
+             const msg = data.raw || data.message;
+             if (msg) log(msg, "muscle");
+        });
+
+        socket.on('APP_JOB_FINISHED', (data) => {
+            if(data.app_id === APP_ID) {
+                log(`TERMINATION SIGNAL RECEIVED: ${data.status}`, "success");
+                stopExtractionUI();
+            }
+        });
+
+        function log(msg, type='info') {
+            const term = document.getElementById('terminal');
+            const line = document.createElement('div');
+            line.className = `log-line ${type}`;
+            line.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            term.appendChild(line);
+            term.scrollTop = term.scrollHeight;
+            if (term.childNodes.length > 150) term.removeChild(term.firstChild);
+        }
+
+        function stopExtractionUI() {
+            // [PATCHED] Hapus pengecekan 'if (!isExtractionRunning) return;'
+            // Biar tombol dipaksa reset ke START meskipun variabel state-nya error.
+            // if (!isExtractionRunning) return;
+
+            isExtractionRunning = false;
+            if(pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+            const btn = document.getElementById('btn-run');
+            btn.innerText = "START";
+            btn.classList.remove('running');
+            log("UI RECOVERY: System state reset to standby.", "system");
+        }
+
+        async function handleExtractionToggle() {
+            if (isExtractionRunning) {
+                log("MANUAL INTERRUPT INITIATED...", "error");
+                stopExtractionUI();
+            } else {
+                await runExtraction();
+            }
+        }
+
+        // [ADDED] POLLING FUNCTION (Mirip Golden Moment)
+        function startPolling(jobId) {
+            log(`[POLLING] Initializing link for Job: ${jobId}`, "system");
+
+            // Clear interval lama kalo ada, biar gak double
+            if(pollInterval) clearInterval(pollInterval);
+
+            pollInterval = setInterval(async () => {
+                try {
+                    // Nembak endpoint /progress yang baru kita buat
+                    const res = await fetch(`/api/v1/apps/execute/${APP_ID}/progress`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({job_id: jobId, user_id: userId})
+                    });
+                    const data = await res.json();
+
+                    // [READ & FLUSH LOGIC]
+                    if(data.logs && Array.isArray(data.logs)) {
+                        data.logs.forEach(l => {
+                            log(l.msg, l.type || "muscle");
+
+                            // [CRITICAL PATCH] AGGRESSIVE STOP
+                            // Kalau nemu kata-kata 'magic' di log, langsung matikan UI tanpa babibu.
+                            if (l.msg.includes("###SEQUENCE_COMPLETE###") ||
+                                l.msg.includes('{"status": "success"') ||
+                                l.msg.includes("Final Outcome")) {
+
+                                log("✅ [UI] Detected completion signal in logs.", "success");
+                                stopExtractionUI();
+                            }
+                        });
+                    }
+
+                    // Kalau status kelar/gagal, setop polling & RESET TOMBOL
+                    if(data.status === 'completed' || data.status === 'success') {
+                         log("✅ Job Completed Successfully.", "success");
+                         stopExtractionUI();
+                    } else if (data.status === 'failed') {
+                         log("❌ Job Failed.", "error");
+                         stopExtractionUI();
+                    }
+
+                } catch(e) {
+                    console.error("Polling error:", e);
+                    // Jangan stop UI disini, biarin retry
+                }
+            }, 1000); // Tanya tiap 1 detik
+        }
+
+        async function runExtraction() {
+            const btn = document.getElementById('btn-run');
+            const url = document.getElementById('targetUrl').value;
+            if(!url) return log("CRITICAL: NO DATA STREAM PROVIDED.", "error");
+
+            isExtractionRunning = true;
+            btn.innerText = "STOP";
+            btn.classList.add('running');
+
+            document.getElementById('terminal').innerHTML = "";
+            log("Initiating Neural Handshake...", "info");
+
+            try {
+                const res = await fetch(`/api/v1/apps/execute/${APP_ID}/quick_download`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url,
+                        format_mode: document.getElementById('mode').value,
+                        output_folder: document.getElementById('outDir').value,
+                        user_id: userId
+                    })
+                });
+                const result = await res.json();
+
+                if(result.status === "job_started" || result.status === "success") {
+                    const jobId = result.job_id || "active";
+                    log(`Job Dispatched (ID: ${jobId}). Waiting...`, "system");
+                    startPolling(jobId);
+                } else {
+                    // Kalau start aja udah gagal, reset UI
+                    log(`Failed to start: ${result.error}`, "error");
+                    stopExtractionUI();
+                }
+            } catch(e) {
+                log(`LINK ERROR: ${e.message}`, "error");
+                stopExtractionUI();
+            }
+        }
+
+        async function createFolder() {
+            const name = document.getElementById('newFolderName').value;
+            if(!name) return alert("Folder name required!");
+            try {
+                const res = await fetch(`/api/v1/apps/execute/${APP_ID}/create_new_folder`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        current_path: currentPath,
+                        name: name,
+                        user_id: userId
+                    })
+                });
+                const result = await res.json();
+                if(result.status === 'success') {
+                    document.getElementById('newFolderName').value = "";
+                    loadDir(currentPath);
+                    log(`✅ Folder created: ${name}`, "success");
+                } else {
+                    log(`❌ Failed to create folder: ${result.error}`, "error");
+                }
+            } catch(e) {
+                log(`❌ API Error: ${e.message}`, "error");
+            }
+        }
+
+        async function loadDir(path) {
+            try {
+                const res = await fetch(`/api/v1/apps/execute/${APP_ID}/browse_directory`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        path,
+                        user_id: userId
+                    })
+                });
+                const data = await res.json();
+                let html = '';
+                if(data.items) {
+                    data.items.forEach(item => {
+                        const isDir = (item.type === "directory" || item.type === "folder");
+                        const icon = isDir ? "mdi-folder" : "mdi-file";
+                        const itemClass = isDir ? "item-directory" : "item-file";
+                        const action = isDir ? `onclick="loadDir('${item.path.replace(/\\/g, '\\\\')}')"` : "";
+                        html += `<div class="folder-item ${itemClass}" ${action}>
+                                    <div><i class="mdi ${icon}"></i> ${item.name}</div>
+                                    <i class="mdi mdi-delete delete-btn" onclick="deleteItem('${item.path.replace(/\\/g, '\\\\')}', event)"></i>
+                                 </div>`;
+                    });
+                    document.getElementById('folderList').innerHTML = html;
+                    currentPath = data.current_path;
+                }
+            } catch(e) { log("FS Conn Error", "error"); }
+        }
+
+        async function deleteItem(path, event) {
+            event.stopPropagation();
+            if(!confirm("WIPE SECTOR PERMANENTLY?")) return;
+            try {
+                const res = await fetch(`/api/v1/apps/execute/${APP_ID}/delete_item`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        target_path: path,
+                        user_id: userId
+                    })
+                });
+                if(res.ok) loadDir(currentPath);
+            } catch(e) { }
+        }
+
+        function openFolderBrowser() { document.getElementById('folderModal').style.display = 'block'; loadDir(""); }
+        function closeModal() { document.getElementById('folderModal').style.display = 'none'; }
+        function selectCurrentFolder() { document.getElementById('outDir').value = currentPath; closeModal(); log(`Target Sector: ${currentPath}`, "success"); }
+    </script>
+</body>
+</html>

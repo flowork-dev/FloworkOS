@@ -1,0 +1,34 @@
+{
+    "id": "neural_dojo",
+    "name": "Neural Dojo",
+    "version": "2.6.0",
+    "description": "Advanced AI Training Facility with Real-Time PyTorch integration.",
+    "category": "developer_tools",
+
+    "//_ADDED_FOR_CORE_V2": "Field 'type' dibutuhkan oleh AppManagerService baru",
+    "type": "apps",
+
+    "author": "Flowork Cyber Division",
+    "tier": "architect",
+
+    "//_METADATA_FOR_MUSCLE": "Konfigurasi AppRuntime",
+    "entry_point": "main.py",
+    "runtime": "python",
+
+    "permissions": [
+        "network.outbound",
+        "filesystem.read",
+        "filesystem.write",
+        "hardware.gpu"
+    ],
+
+    "gui": {
+        "enabled": true,
+        "dashboard_path": "index.html",
+        "icon": "mdi-brain"
+    },
+
+    "nodes": [],
+    "capabilities": ["model_training", "vram_isolation"],
+    "tags": ["ai", "pytorch", "training"]
+}

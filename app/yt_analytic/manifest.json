@@ -1,0 +1,77 @@
+{
+    "id": "yt_analytic",
+    "name": "Tube Insight",
+    "version": "1.0.0",
+    "description": "Analyze YouTube video details and comment sentiment using AI.",
+    "category": "analytics",
+    "type": "apps",
+    "author": "Flowork User",
+    "tier": "architect",
+    "entry_point": "main.py",
+    "runtime": "python",
+    "icon": "icon.svg",
+    "gui": {
+        "enabled": true,
+        "dashboard_path": "index.html",
+        "icon": "mdi-youtube"
+    },
+    "required_variables": {
+        "YOUTUBE_API_KEY": "string",
+        "OPENAI_API_KEY": "string"
+    },
+    "ui": {
+        "input_fields": [
+            {
+                "key": "video_url",
+                "label": "YouTube Video URL",
+                "type": "string",
+                "required": true,
+                "placeholder": "https://www.youtube.com/watch?v=..."
+            }
+        ],
+        "actions": [
+            {
+                "label": "Analyze Video",
+                "endpoint": "analyze",
+                "icon": "mdi-magnify"
+            }
+        ]
+    },
+    "dashboard": {
+        "layout": [
+            {
+                "type": "glass",
+                "title": "Video Details",
+                "data_source": "video_info",
+                "fields": [
+                    "title",
+                    "view_count"
+                ]
+            },
+            {
+                "type": "glass",
+                "title": "Sentiment Analysis",
+                "data_source": "sentiment_summary",
+                "fields": [
+                    "overall_sentiment",
+                    "positive_percentage",
+                    "negative_percentage"
+                ]
+            },
+            {
+                "type": "list",
+                "title": "Top Comments",
+                "data_source": "top_comments",
+                "fields": [
+                    "author",
+                    "text",
+                    "sentiment"
+                ]
+            }
+        ]
+    },
+    "provides": [
+        "analyze"
+    ],
+    "is_installed": true
+}

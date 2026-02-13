@@ -1,0 +1,57 @@
+{
+    "id": "ai_council",
+    "name": "The AI Council",
+    "version": "1.0.0",
+    "description": "Multi-Agent Orchestrator. DeepSeek (Strategy) -> DuckDuckGo (Research) -> Gemini (Analysis) -> ChatGPT (Report).",
+    "category": "agents",
+    "type": "apps",
+    "author": "Flowork Cyber Division",
+    "tier": "architect",
+    "entry_point": "main.py",
+    "runtime": "python",
+    "permissions": [
+        "internet.access",
+        "filesystem.read",
+        "filesystem.write"
+    ],
+    "gui": {
+        "enabled": true,
+        "dashboard_path": "index.html",
+        "icon": "mdi-account-group"
+    },
+    "nodes": [
+        {
+            "id": "ai_council_process",
+            "name": "AI Council Meeting",
+            "description": "Trigger a multi-agent debate and research session.",
+            "entry_class": "AICouncilNode",
+            "file": "backend/node.py",
+            "inputs": [
+                {
+                    "name": "topic",
+                    "label": "Topic / Question",
+                    "type": "string",
+                    "ui_type": "textarea",
+                    "placeholder": "Analyze the future of Quantum Computing..."
+                }
+            ],
+            "outputs": [
+                { "name": "report", "type": "string" },
+                { "name": "json_data", "type": "object" }
+            ]
+        }
+    ],
+    "capabilities": ["multi_agent", "internet_search", "long_context"],
+    "tags": ["ai", "research", "agents"],
+
+    "//": "REGION: POIN 5 - APP SCHEDULER (CRON JOBS)",
+    "schedules": [
+        {
+            "cron": "0 7 * * *",
+            "action": "start_meeting",
+            "params": {
+                "topic": "Daily Global Crypto & AI Market Sentiment Analysis"
+            }
+        }
+    ]
+}

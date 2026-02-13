@@ -1,0 +1,101 @@
+{
+  "main_logic_py": [
+    {
+      "timestamp": "2026-01-11 22:20:20.314865",
+      "error": "SECURITY_RISK (os.getenv)",
+      "fix_hint": "IKUTI PROTOKOL DENGAN KETAT."
+    },
+    {
+      "timestamp": "2026-01-11 22:20:32.864624",
+      "error": "FLASK_DETECTED",
+      "fix_hint": "IKUTI PROTOKOL DENGAN KETAT."
+    },
+    {
+      "timestamp": "2026-01-11 22:20:40.618042",
+      "error": "SYNTAX_ERROR (Dict access on OpenAI Object)",
+      "fix_hint": "IKUTI PROTOKOL DENGAN KETAT."
+    },
+    {
+      "timestamp": "2026-01-11 22:20:51.481048",
+      "error": "SECURITY_RISK (os.getenv), SYNTAX_ERROR (Dict access on OpenAI Object)",
+      "fix_hint": "IKUTI PROTOKOL DENGAN KETAT."
+    },
+    {
+      "timestamp": "2026-01-11 22:22:38.647894",
+      "error": "FLASK_DETECTED, SECURITY_RISK (os.getenv)",
+      "fix_hint": "IKUTI PROTOKOL DENGAN KETAT."
+    },
+    {
+      "timestamp": "2026-01-11 22:32:30.304396",
+      "error": "FLASK_DETECTED, SECURITY_RISK (os.getenv), SYNTAX_ERROR (Dict access on OpenAI Object)",
+      "fix_hint": "IKUTI PROTOKOL DENGAN KETAT."
+    },
+    {
+      "timestamp": "2026-01-11 23:39:48.985885",
+      "error": "SECURITY_RISK (os.getenv)"
+    },
+    {
+      "timestamp": "2026-01-11 23:39:54.506885",
+      "error": "DUMMY_DETECTED (placeholder)"
+    },
+    {
+      "timestamp": "2026-01-11 23:40:03.179449",
+      "error": "SECURITY_RISK (os.getenv)"
+    }
+  ],
+  "index_html": [
+    {
+      "timestamp": "2026-01-11 22:24:00.627959",
+      "error": "DUMMY_DETECTED",
+      "fix_hint": "IKUTI PROTOKOL DENGAN KETAT."
+    },
+    {
+      "timestamp": "2026-01-11 22:38:02.281612",
+      "error": "DUMMY_DETECTED"
+    },
+    {
+      "timestamp": "2026-01-11 22:38:18.880732",
+      "error": "DUMMY_DETECTED"
+    },
+    {
+      "timestamp": "2026-01-11 22:38:32.312058",
+      "error": "DUMMY_DETECTED"
+    },
+    {
+      "timestamp": "2026-01-11 22:38:50.144892",
+      "error": "DUMMY_DETECTED"
+    },
+    {
+      "timestamp": "2026-01-11 23:04:05.782177",
+      "error": "DUMMY_DETECTED (Found: 'placeholder')"
+    },
+    {
+      "timestamp": "2026-01-11 23:04:19.661445",
+      "error": "DUMMY_DETECTED (Found: 'placeholder')"
+    },
+    {
+      "timestamp": "2026-01-11 23:04:32.502165",
+      "error": "DUMMY_DETECTED (Found: 'placeholder')"
+    },
+    {
+      "timestamp": "2026-01-11 23:34:12.188040",
+      "error": "DUMMY_DETECTED (placeholder)"
+    },
+    {
+      "timestamp": "2026-01-11 23:34:22.134880",
+      "error": "DUMMY_DETECTED (placeholder)"
+    }
+  ],
+  "manifest": [],
+  "config_schema": [],
+  "requirements_txt": [],
+  "app_service_py": [
+    {
+      "timestamp": "2026-01-11 22:37:14.771466",
+      "error": "DUMMY_DETECTED"
+    }
+  ],
+  "app_router_py": [],
+  "ai_code_assistant_py": [],
+  "generate_new_app_py": []
+}
